@@ -31,6 +31,8 @@ typedef struct {
     const char *filename;
     int errors;
     AstNode *root;
+    int top_functions;       /* functions[1..top_functions] are the top-level 'kaam's; methods follow */
+    int cur_class;           /* class whose method is being compiled, or -1 */
 
     IrFunction *fn;
     int is_main;
@@ -125,10 +127,38 @@ static int add_string(Compiler *c, const char *chars, int length) {
 }
 
 static int find_function(Compiler *c, Token name) {
-    for (int i = 1; i < c->program->function_count; i++) {
+    int end = c->top_functions + 1;
+    for (int i = 1; i < end; i++) {
         if (same(c->program->functions[i].name, name)) return i;
     }
     return -1;
+}
+
+static int find_class(Compiler *c, Token name) {
+    for (int i = 0; i < c->program->class_count; i++) {
+        if (same(c->program->classes[i].decl->as.class_decl.name, name)) return i;
+    }
+    return -1;
+}
+
+static int class_field(const AstNode *decl, Token name) {
+    for (int i = 0; i < decl->as.class_decl.field_count; i++) {
+        if (same(decl->as.class_decl.fields[i].name, name)) return i;
+    }
+    return -1;
+}
+
+static int class_method(const AstNode *decl, Token name) {
+    for (int i = 0; i < decl->as.class_decl.method_count; i++) {
+        if (same(decl->as.class_decl.methods[i]->as.function.name, name)) return i;
+    }
+    return -1;
+}
+
+/* Inside a method, a bare name that is a field (and not a parameter or loop variable) means yo.name. */
+static int is_bare_field(Compiler *c, Token name) {
+    return c->cur_class >= 0 && !c->is_main && local_slot(c, name) < 0 &&
+           class_field(c->program->classes[c->cur_class].decl, name) >= 0;
 }
 
 /* ---- expressions ---- */
@@ -136,26 +166,79 @@ static int find_function(Compiler *c, Token name) {
 static void compile_expr(Compiler *c, AstNode *node);
 static void compile_stmt(Compiler *c, AstNode *node);
 
-static void compile_call(Compiler *c, AstNode *node) {
-    Token name = node->as.call.name;
-    if (node->as.call.receiver) {
-        unsupported(c, name, "Method calls");
-        return;
-    }
-    int builtin = rt_builtin_id(name.start, name.length);
-    int fn_index = builtin < 0 ? find_function(c, name) : -1;
-    if (builtin < 0 && fn_index < 0) {
-        unsupported(c, name, "Class construction or an unknown function");
+static void compile_construct(Compiler *c, int class_index, AstNode *node) {
+    const AstNode *decl = c->program->classes[class_index].decl;
+    int argc = node->as.call.arg_count;
+    int ctor = class_method(decl, (Token){ .start = "banau", .length = 5 });
+    int expected = ctor >= 0 ? decl->as.class_decl.methods[ctor]->as.function.param_count : 0;
+    if (argc != expected) {
+        c->errors++;
+        report_error(c->source, c->filename, node->as.call.name, "Wrong number of arguments for this class.");
+        emit(c, IR_CONST_INT, 0, 0, no_token(), 1);
         return;
     }
 
-    int argc = node->as.call.arg_count;
-    for (int i = 0; i < argc; i++) compile_expr(c, node->as.call.args[i]);
-    if (builtin >= 0) {
-        emit(c, IR_BUILTIN, builtin, argc, name, 1 - argc);
-    } else {
-        emit(c, IR_CALL, fn_index, argc, name, 1 - argc);
+    emit(c, IR_NEW_OBJECT, class_index, 0, node->as.call.name, 1);
+
+    /* Starting values are evaluated afresh for every object, as if at the top level. */
+    int saved_main = c->is_main, saved_class = c->cur_class;
+    c->is_main = 1;
+    c->cur_class = -1;
+    for (int i = 0; i < decl->as.class_decl.field_count; i++) {
+        compile_expr(c, decl->as.class_decl.fields[i].value);
+        emit(c, IR_INIT_FIELD, i, 0, decl->as.class_decl.fields[i].name, -1);
     }
+    c->is_main = saved_main;
+    c->cur_class = saved_class;
+
+    if (ctor >= 0) {
+        emit(c, IR_DUP, 0, 0, no_token(), 1);
+        for (int i = 0; i < argc; i++) compile_expr(c, node->as.call.args[i]);
+        emit(c, IR_CALL, c->program->classes[class_index].method_fn[ctor], argc + 1, node->as.call.name, -argc);
+        emit(c, IR_POP, 0, 0, no_token(), -1);
+    }
+}
+
+static void compile_call(Compiler *c, AstNode *node) {
+    Token name = node->as.call.name;
+    int argc = node->as.call.arg_count;
+
+    if (node->as.call.receiver) {
+        compile_expr(c, node->as.call.receiver);
+        for (int i = 0; i < argc; i++) compile_expr(c, node->as.call.args[i]);
+        emit(c, IR_CALL_METHOD, c->cur_class, argc, name, -argc);
+        return;
+    }
+
+    int builtin = rt_builtin_id(name.start, name.length);
+    if (builtin >= 0) {
+        for (int i = 0; i < argc; i++) compile_expr(c, node->as.call.args[i]);
+        emit(c, IR_BUILTIN, builtin, argc, name, 1 - argc);
+        return;
+    }
+
+    /* Inside a method, 'bolau()' calls a method of the same object. */
+    if (c->cur_class >= 0 && !c->is_main && class_method(c->program->classes[c->cur_class].decl, name) >= 0) {
+        emit(c, IR_LOAD_LOCAL, 0, 0, no_token(), 1);
+        for (int i = 0; i < argc; i++) compile_expr(c, node->as.call.args[i]);
+        emit(c, IR_CALL_METHOD, c->cur_class, argc, name, -argc);
+        return;
+    }
+
+    int class_index = find_class(c, name);
+    if (class_index >= 0) {
+        compile_construct(c, class_index, node);
+        return;
+    }
+
+    int fn_index = find_function(c, name);
+    if (fn_index < 0) {
+        unsupported(c, name, "An unknown function");
+        emit(c, IR_CONST_INT, 0, 0, no_token(), 1);
+        return;
+    }
+    for (int i = 0; i < argc; i++) compile_expr(c, node->as.call.args[i]);
+    emit(c, IR_CALL, fn_index, argc, name, 1 - argc);
 }
 
 static void store_var(Compiler *c, Token name) {
@@ -176,6 +259,11 @@ static void compile_expr(Compiler *c, AstNode *node) {
             break;
         case AST_VARIABLE: {
             Token name = node->as.variable.name;
+            if (is_bare_field(c, name)) {
+                emit(c, IR_LOAD_LOCAL, 0, 0, no_token(), 1);
+                emit(c, IR_GET_FIELD, c->cur_class, 0, name, 0);
+                break;
+            }
             emit(c, IR_LOAD_NAME, c->is_main ? -1 : local_slot(c, name), global_id(c, name), name, 1);
             break;
         }
@@ -228,9 +316,11 @@ static void compile_expr(Compiler *c, AstNode *node) {
             compile_call(c, node);
             break;
         case AST_FIELD:
+            compile_expr(c, node->as.field.object);
+            emit(c, IR_GET_FIELD, c->cur_class, 0, node->as.field.name, 0);
+            break;
         case AST_SELF:
-            unsupported(c, node->token, "Objects and fields");
-            emit(c, IR_CONST_INT, 0, 0, no_token(), 1);
+            emit(c, IR_LOAD_LOCAL, 0, 0, no_token(), 1);
             break;
         default:
             unsupported(c, node->token, "This expression");
@@ -260,9 +350,22 @@ static void compile_stmt(Compiler *c, AstNode *node) {
             emit(c, IR_PRINT, 0, 0, node->token, -1);
             break;
         case AST_ASSIGN:
+            if (is_bare_field(c, node->as.assign.name)) {
+                emit(c, IR_LOAD_LOCAL, 0, 0, no_token(), 1);
+                compile_expr(c, node->as.assign.value);
+                emit(c, IR_SET_FIELD, c->cur_class, 0, node->as.assign.name, -2);
+                break;
+            }
             compile_expr(c, node->as.assign.value);
             store_var(c, node->as.assign.name);
             break;
+        case AST_FIELD_ASSIGN: {
+            AstNode *target = node->as.field_assign.target;
+            compile_expr(c, target->as.field.object);
+            compile_expr(c, node->as.field_assign.value);
+            emit(c, IR_SET_FIELD, c->cur_class, 0, target->as.field.name, -2);
+            break;
+        }
         case AST_INDEX_ASSIGN: {
             AstNode *target = node->as.index_assign.target;
             compile_expr(c, target->as.index.target);
@@ -378,8 +481,6 @@ static void compile_stmt(Compiler *c, AstNode *node) {
             compile_block(c, node);
             break;
         case AST_CLASS:
-            unsupported(c, node->as.class_decl.name, "Classes");
-            break;
         case AST_FUNCTION:
         case AST_IMPORT:
             break;  /* functions are compiled separately; imports are already spliced in */
@@ -394,7 +495,9 @@ static void compile_stmt(Compiler *c, AstNode *node) {
 static void declare_assigned(Compiler *c, AstNode *node) {
     if (!node) return;
     switch (node->type) {
-        case AST_ASSIGN: declare_local(c, node->as.assign.name); break;
+        case AST_ASSIGN:
+            if (!is_bare_field(c, node->as.assign.name)) declare_local(c, node->as.assign.name);
+            break;
         case AST_IF:
             declare_assigned(c, node->as.if_stmt.then_block);
             declare_assigned(c, node->as.if_stmt.else_branch);
@@ -415,17 +518,19 @@ static void declare_assigned(Compiler *c, AstNode *node) {
     }
 }
 
-static void compile_function(Compiler *c, IrFunction *fn, AstNode *decl, AstNode *main_body) {
+static void compile_function(Compiler *c, IrFunction *fn, AstNode *decl, AstNode *main_body, int class_index) {
     c->fn = fn;
     c->depth = 0;
     c->next_label = 0;
     c->local_names = 0;
     c->loop_count = 0;
     c->is_main = decl == NULL;
+    c->cur_class = class_index;
 
     if (decl) {
+        if (class_index >= 0) declare_local(c, (Token){ .start = "yo", .length = 2 });   /* slot 0 */
         for (int i = 0; i < decl->as.function.param_count; i++) declare_local(c, decl->as.function.params[i]);
-        fn->param_count = decl->as.function.param_count;
+        fn->param_count = decl->as.function.param_count + (class_index >= 0 ? 1 : 0);
         declare_assigned(c, decl->as.function.body);
         compile_stmt(c, decl->as.function.body);
     } else {
@@ -439,16 +544,24 @@ static void compile_function(Compiler *c, IrFunction *fn, AstNode *decl, AstNode
 IrProgram *ir_compile(AstNode *program, const char *source, const char *filename) {
     IrProgram *p = calloc(1, sizeof(IrProgram));
     if (!p) exit(1);
-    Compiler c = { .program = p, .source = source, .filename = filename, .root = program };
+    Compiler c = { .program = p, .source = source, .filename = filename, .root = program, .cur_class = -1 };
 
-    int count = 1;
+    int top = 0, classes = 0, methods = 0;
     for (int i = 0; i < program->as.block.count; i++) {
-        if (program->as.block.statements[i]->type == AST_FUNCTION) count++;
+        AstNode *n = program->as.block.statements[i];
+        if (n->type == AST_FUNCTION) top++;
+        if (n->type == AST_CLASS) {
+            classes++;
+            methods += n->as.class_decl.method_count;
+        }
     }
+    int count = 1 + top + methods;
     p->function_count = count;
     p->functions = calloc((size_t)count, sizeof(IrFunction));
+    p->classes = calloc((size_t)classes + 1, sizeof(IrClass));
     AstNode **decls = calloc((size_t)count, sizeof(AstNode *));
-    if (!p->functions || !decls) exit(1);
+    int *owner = calloc((size_t)count, sizeof(int));
+    if (!p->functions || !p->classes || !decls || !owner) exit(1);
 
     int k = 1;
     for (int i = 0; i < program->as.block.count; i++) {
@@ -459,14 +572,41 @@ IrProgram *ir_compile(AstNode *program, const char *source, const char *filename
             unsupported(&c, n->as.function.name, "A function with a duplicate or built-in name");
         }
         p->functions[k].name = n->as.function.name;
+        owner[k] = -1;
         decls[k++] = n;
+        c.top_functions = k - 1;
     }
 
+    int ci = 0;
+    for (int i = 0; i < program->as.block.count; i++) {
+        AstNode *n = program->as.block.statements[i];
+        if (n->type != AST_CLASS) continue;
+        IrClass *cls = &p->classes[ci];
+        cls->decl = n;
+        Token cname = n->as.class_decl.name;
+        if (rt_builtin_id(cname.start, cname.length) >= 0 || find_function(&c, cname) >= 0 || find_class(&c, cname) >= 0) {
+            unsupported(&c, cname, "A class with a duplicate or built-in name");
+        }
+        c.program->class_count = ci + 1;
+        cls->method_fn = calloc((size_t)n->as.class_decl.method_count + 1, sizeof(int));
+        if (!cls->method_fn) exit(1);
+        for (int m = 0; m < n->as.class_decl.method_count; m++) {
+            AstNode *method = n->as.class_decl.methods[m];
+            p->functions[k].name = method->as.function.name;
+            cls->method_fn[m] = k;
+            owner[k] = ci;
+            decls[k++] = method;
+        }
+        ci++;
+    }
+
+    p->class_count = classes;
     p->functions[0].name = (Token){ .start = "<main>", .length = 6 };
-    compile_function(&c, &p->functions[0], NULL, program);
-    for (int i = 1; i < count; i++) compile_function(&c, &p->functions[i], decls[i], NULL);
+    compile_function(&c, &p->functions[0], NULL, program, -1);
+    for (int i = 1; i < count; i++) compile_function(&c, &p->functions[i], decls[i], NULL, owner[i]);
 
     free(decls);
+    free(owner);
     free(c.locals);
     if (c.errors) {
         ir_free(p);
@@ -583,7 +723,8 @@ static const char *op_name(IrOp op) {
     static const char *const names[] = {
         "const_int", "const_str", "pop", "load_local", "store_local", "load_global", "store_global", "load_name",
         "binop", "neg", "pos", "not", "truth", "jump", "jump_if_false", "label", "new_array", "index", "set_index",
-        "len", "check_iter", "check_num", "call", "builtin", "return", "print",
+        "len", "check_iter", "check_num", "call", "builtin", "return", "print", "new_object", "init_field", "dup",
+        "get_field", "set_field", "call_method",
     };
     return names[op];
 }
@@ -622,6 +763,15 @@ void ir_dump(const IrProgram *program, FILE *out) {
                 case IR_CALL: fprintf(out, " %.*s/%ld", program->functions[in->a].name.length,
                                       program->functions[in->a].name.start, in->b); break;
                 case IR_BUILTIN: case IR_CHECK_NUM: fprintf(out, " %ld", in->a); break;
+                case IR_NEW_OBJECT: {
+                    Token n = program->classes[in->a].decl->as.class_decl.name;
+                    fprintf(out, " %.*s", n.length, n.start);
+                    break;
+                }
+                case IR_GET_FIELD: case IR_SET_FIELD: case IR_CALL_METHOD:
+                    fprintf(out, " .%.*s", in->token.length, in->token.start);
+                    break;
+                case IR_INIT_FIELD: fprintf(out, " %ld", in->a); break;
                 case IR_CONST_INT: case IR_LOAD_LOCAL: case IR_STORE_LOCAL: case IR_NEW_ARRAY:
                     fprintf(out, " %ld", in->a); break;
                 default: break;
@@ -638,6 +788,8 @@ void ir_free(IrProgram *program) {
         free(program->functions[f].label_pos);
     }
     free(program->functions);
+    for (int i = 0; i < program->class_count; i++) free(program->classes[i].method_fn);
+    free(program->classes);
     for (int i = 0; i < program->string_count; i++) free(program->strings[i]);
     free(program->strings);
     free(program->string_lengths);

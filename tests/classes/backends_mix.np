@@ -1,0 +1,42 @@
+base = 10
+class Counter {
+  count = base
+  items = []
+  _secret = 7
+  kaam banau(start) {
+    count = start
+  }
+  kaam badhau(n) {
+    ko_lagi i in 0..n {
+      count = count + 1
+      thapa(items, count)
+    }
+    farkau yo
+  }
+  kaam dubai() {
+    badhau(2)
+    farkau count + _secret
+  }
+}
+class Box {
+  c = Counter(1)
+  kaam get() {
+    farkau c.dubai()
+  }
+}
+kaam use(x) {
+  x.badhau(1)
+  farkau x.count
+}
+a = Counter(5)
+vana(a.dubai())
+vana(use(a))
+vana(a.items)
+b = Box()
+vana(b.get())
+vana(b)
+objs = [Counter(1), Counter(2)]
+objs[1].count = 40
+vana(objs[1].count + objs[0].count)
+a.count = a.count * 2
+vana(a)

@@ -1,0 +1,7 @@
+14
+8
+[6, 7, 8]
+10
+Box(c=Counter(count=3, items=[2, 3], _secret=7))
+41
+Counter(count=16, items=[6, 7, 8], _secret=7)

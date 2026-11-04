@@ -49,8 +49,8 @@ line from stdin); tests in `tests/basics/`. **Post-M14 additions:** string inter
 - *Runtime (`src/rt.c`)*: shared value operations and error messages used by the VM and native programs (`VAL_UNSET` marks unassigned slots).
 - *VM (M12)*: `src/vm.c`, explicit frame stack, call depth 1000. `neplang --vm`.
 - *Native (M14)*: `src/cgen.c` turns IR into C (stack slots become variables `s0..`, labels become C labels) and runs the system C compiler against value.c/rt.c/diagnostics.c. `neplang --emit-c` / `--build prog.np -o out`. `DEFS` in the Makefile bakes in the runtime dir (`make install` rebuilds with the installed one).
-- *Limits*: classes/objects/methods are interpreter-only (`ir_compile` reports "can't be compiled yet").
-- *Tests*: `make test` = interpreter suites + `tests/run_backends.sh vm` (re-runs every non-class program through the VM, plus IR checks); `make test-native` does the same via native executables; `make test-all` both.
+- *Classes in the compiled backends*: each method is an `IrFunction` with `yo` in slot 0 (`param_count` includes it); `IrProgram.classes` maps class → AST_CLASS decl + `method_fn[]`. Ops `IR_NEW_OBJECT/INIT_FIELD/DUP/GET_FIELD/SET_FIELD/CALL_METHOD`; field/method lookup, privacy and arity errors are in `rt.c` (`rt_get_field`, `rt_find_method`), keyed by name at runtime with `a` = enclosing class for the privacy check. Bare field names in methods resolve statically (`is_bare_field`), field defaults are inlined at each construction site compiled in global-only mode. Native: `cgen.c` emits static `AstNode` class descriptions (`K0..`) so `value.c`/`rt.c` work unchanged. Known edge: a `ko_lagi` variable named like a field is always a local.
+- *Tests*: `make test` = interpreter suites + `tests/run_backends.sh vm` (re-runs every program through the VM, plus IR checks); `make test-native` does the same via native executables; `make test-all` both.
 
 Milestone order follows `docs/prompt.txt` §33 where it and the README disagreed (strings
 came before structs/classes); the README roadmap now reflects that.

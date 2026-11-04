@@ -71,6 +71,10 @@ static void leave(Vm *vm) {
     free(frame->locals);
 }
 
+static const AstNode *caller_class(const IrProgram *program, long index) {
+    return index < 0 ? NULL : program->classes[index].decl;
+}
+
 void vm_run(const IrProgram *program) {
     Vm *vm = checked_alloc(sizeof(Vm));
     vm->stack_capacity = 256;
@@ -175,6 +179,40 @@ void vm_run(const IrProgram *program) {
                 Value v = pop(vm);
                 rt_print(v);
                 value_release(v);
+                break;
+            }
+            case IR_NEW_OBJECT: push(vm, value_new_object(program->classes[in->a].decl)); break;
+            case IR_INIT_FIELD: {
+                Value v = pop(vm);
+                Object *object = vm->stack[vm->sp - 1].as.object;
+                value_release(object->fields[in->a]);
+                object->fields[in->a] = v;
+                break;
+            }
+            case IR_DUP: push(vm, value_retain(vm->stack[vm->sp - 1])); break;
+            case IR_GET_FIELD: {
+                Value object = pop(vm);
+                push(vm, rt_get_field(object, in->token.start, in->token.length, caller_class(program, in->a),
+                                      in->token));
+                break;
+            }
+            case IR_SET_FIELD: {
+                Value value = pop(vm);
+                Value object = pop(vm);
+                rt_set_field(object, in->token.start, in->token.length, value, caller_class(program, in->a),
+                             in->token);
+                break;
+            }
+            case IR_CALL_METHOD: {
+                int argc = (int)in->b;
+                const AstNode *klass;
+                int method = rt_find_method(vm->stack[vm->sp - argc - 1], in->token.start, in->token.length, argc,
+                                            caller_class(program, in->a), in->token, &klass);
+                int fn = -1;
+                for (int i = 0; i < program->class_count; i++) {
+                    if (program->classes[i].decl == klass) fn = program->classes[i].method_fn[method];
+                }
+                enter(vm, &program->functions[fn], in->token);
                 break;
             }
         }

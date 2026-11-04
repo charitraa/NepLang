@@ -336,3 +336,111 @@ Value rt_builtin(int id, Value *args, Token at) {
         }
     }
 }
+
+/* ---- objects ---- */
+
+static int rt_field_index(const AstNode *klass, const char *name, int length) {
+    for (int i = 0; i < klass->as.class_decl.field_count; i++) {
+        Token f = klass->as.class_decl.fields[i].name;
+        if (f.length == length && strncmp(f.start, name, (size_t)length) == 0) return i;
+    }
+    return -1;
+}
+
+static int rt_method_index(const AstNode *klass, const char *name, int length) {
+    for (int i = 0; i < klass->as.class_decl.method_count; i++) {
+        Token m = klass->as.class_decl.methods[i]->as.function.name;
+        if (m.length == length && strncmp(m.start, name, (size_t)length) == 0) return i;
+    }
+    return -1;
+}
+
+static void rt_expect_object(Value v, const char *name, int length, const char *what, Token at) {
+    if (v.type == VAL_OBJECT) return;
+    char message[256];
+    snprintf(message, sizeof(message), "Can't use '.%.*s' on %s. Only objects have %s.", length, name,
+             value_type_name(v), what);
+    rt_error(at, message);
+}
+
+static void rt_check_access(const AstNode *klass, const AstNode *caller, const char *name, int length,
+                            const char *kind, Token at) {
+    if (name[0] != '_' || caller == klass) return;
+    Token k = klass->as.class_decl.name;
+    char message[300];
+    snprintf(message, sizeof(message),
+             "The %s '%.*s' is private to class '%.*s' (its name starts with '_'), so it can only be used "
+             "inside %.*s's own methods.",
+             kind, length, name, k.length, k.start, k.length, k.start);
+    rt_error(at, message);
+}
+
+static int rt_field_slot(Value v, const char *name, int length, const AstNode *caller, Token at) {
+    rt_expect_object(v, name, length, "fields", at);
+    const AstNode *klass = v.as.object->klass;
+    int index = rt_field_index(klass, name, length);
+    if (index < 0) {
+        Token k = klass->as.class_decl.name;
+        char message[300];
+        if (rt_method_index(klass, name, length) >= 0) {
+            snprintf(message, sizeof(message), "'%.*s' is a method of '%.*s'. Call it with '( )', e.g. '.%.*s()'.",
+                     length, name, k.length, k.start, length, name);
+        } else {
+            snprintf(message, sizeof(message),
+                     "Class '%.*s' has no field named '%.*s'. Fields must be listed in the class, e.g. '%.*s = 0'.",
+                     k.length, k.start, length, name, length, name);
+        }
+        rt_error(at, message);
+    }
+    rt_check_access(klass, caller, name, length, "field", at);
+    return index;
+}
+
+Value rt_get_field(Value object, const char *name, int length, const AstNode *caller, Token at) {
+    int index = rt_field_slot(object, name, length, caller, at);
+    Value field = value_retain(object.as.object->fields[index]);
+    value_release(object);
+    return field;
+}
+
+void rt_set_field(Value object, const char *name, int length, Value value, const AstNode *caller, Token at) {
+    int index = rt_field_slot(object, name, length, caller, at);
+    Object *o = object.as.object;
+    value_release(o->fields[index]);
+    o->fields[index] = value;
+    value_release(object);
+}
+
+int rt_find_method(Value receiver, const char *name, int length, int argc, const AstNode *caller, Token at,
+                   const AstNode **klass) {
+    rt_expect_object(receiver, name, length, "methods", at);
+    const AstNode *k = receiver.as.object->klass;
+    int index = rt_method_index(k, name, length);
+    Token kname = k->as.class_decl.name;
+    char message[300];
+    if (index < 0) {
+        if (rt_field_index(k, name, length) >= 0) {
+            snprintf(message, sizeof(message), "'%.*s' is a field of '%.*s', not a method. Use it without '( )'.",
+                     length, name, kname.length, kname.start);
+        } else {
+            snprintf(message, sizeof(message), "Class '%.*s' has no method named '%.*s'.", kname.length, kname.start,
+                     length, name);
+        }
+        rt_error(at, message);
+    }
+    rt_check_access(k, caller, name, length, "method", at);
+    if (length == 5 && strncmp(name, "banau", 5) == 0) {
+        snprintf(message, sizeof(message),
+                 "'banau' runs by itself when an object is created with '%.*s(...)'. It can't be called directly.",
+                 kname.length, kname.start);
+        rt_error(at, message);
+    }
+    int params = k->as.class_decl.methods[index]->as.function.param_count;
+    if (argc != params) {
+        snprintf(message, sizeof(message), "Method '%.*s' takes %d argument%s, but %d %s given here.", length, name,
+                 params, params == 1 ? "" : "s", argc, argc == 1 ? "was" : "were");
+        rt_error(at, message);
+    }
+    *klass = k;
+    return index;
+}

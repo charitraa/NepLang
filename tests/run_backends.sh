@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs every test program that doesn't use classes through the bytecode VM and through the
+# Runs every test program through the bytecode VM and through the
 # native backend (NepLang -> C -> executable), and checks they behave like the interpreter:
 # same stdout for .expected tests, and a non-zero exit for .error.np tests.
 # Usage: tests/run_backends.sh [vm|native|all]
@@ -25,7 +25,7 @@ for backend in vm native; do
     echo "== $backend backend"
     for file in tests/*/*.np; do
         case "$file" in tests/*/lib/*|*/cyc_*.np) continue ;; esac
-        # Programs the compiler declines (classes) stay interpreter-only.
+        # Programs the compiler declines stay interpreter-only.
         if "$BIN" --ir "$file" 2>&1 >/dev/null | grep -q "can't be compiled yet"; then
             skipped=$((skipped + 1)); continue
         fi
@@ -60,17 +60,10 @@ if [ "$WHICH" = all ] || [ "$WHICH" = vm ]; then
     else
         echo "FAIL  dead branch removal"; fail=$((fail + 1))
     fi
-    # classes are refused by the compiled backends with a clear message
-    printf 'class A {\n    x = 1\n}\n' > "$TMP/cls.np"
-    if "$BIN" --vm "$TMP/cls.np" 2>&1 | grep -q "can't be compiled yet"; then
-        pass=$((pass + 1))
-    else
-        echo "FAIL  class refusal"; fail=$((fail + 1))
-    fi
     # the VM and the interpreter agree on a stdin-driven program
     printf 'n = sankhya(padha())\nvana(n * 2)\n' > "$TMP/in.np"
     if [ "$(echo 21 | "$BIN" --vm "$TMP/in.np")" = 42 ]; then pass=$((pass + 1)); else echo "FAIL  vm stdin"; fail=$((fail + 1)); fi
 fi
 echo ""
-echo "$pass passed, $fail failed ($skipped skipped: classes are interpreter-only)"
+echo "$pass passed, $fail failed ($skipped skipped: interpreter-only)"
 [ "$fail" -eq 0 ]

@@ -543,7 +543,6 @@ NepLang is still early. These features are **not** available yet:
 - floating-point numbers, a separate bool type (`sacho`/`jutho` are just 1 and 0), `khali` (null)
 - inheritance, interfaces, comparing objects with `==`
 - typed field declarations like `string naam` (planned with the type checker)
-- classes in the VM / native backends (interpreter only)
 - `"${...}"` pieces can't contain a `"` (a string ends at the next quote); write `\${` for a literal `${`
 
 Expressions may span lines after an operator, or inside `( )`, call arguments and `[ ]`.
@@ -652,8 +651,8 @@ neplang --build prog.np -o prog  # native executable (needs a C compiler: cc, or
 ```
 
 All four execution paths share one runtime (`src/rt.c`) so they print identical output and
-identical error messages. Classes are interpreter-only for now: the compiled paths refuse
-them with a clear message. `--build` finds its runtime sources via `NEPLANG_RUNTIME`, else
+identical error messages, classes included (native programs report runtime errors without the
+source line). `--build` finds its runtime sources via `NEPLANG_RUNTIME`, else
 the installed `share/neplang/runtime`, else the checkout's `src/`. Native speed on
 `fib(30)`: interpreter 0.80 s, VM 0.52 s, native 0.10 s.
 

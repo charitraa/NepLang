@@ -6,6 +6,7 @@
  * interpreter. Ownership: functions that take Values consume (release) them unless the
  * comment says "borrows". */
 
+#include "ast.h"
 #include "token.h"
 #include "value.h"
 
@@ -32,6 +33,15 @@ void rt_set_index(Value target, Value index, Value value, Token at);
 Value rt_length_of(Value v);                     /* borrows; live length of an array or string */
 void rt_check_iterable(Value v, Token at);       /* borrows */
 void rt_print(Value v);                          /* borrows; prints value and a newline */
+
+/* Objects. `caller` is the class whose method is running (NULL outside methods): members named
+ * '_x' are private to it. `at` is where errors point. */
+Value rt_get_field(Value object, const char *name, int length, const AstNode *caller, Token at);   /* consumes object */
+void rt_set_field(Value object, const char *name, int length, Value value, const AstNode *caller, Token at);  /* consumes both */
+/* Finds method `name` of the object `receiver` (borrowed) for a call with `argc` arguments, with all
+ * the interpreter's checks. Returns its index in the class's method list and sets *klass. */
+int rt_find_method(Value receiver, const char *name, int length, int argc, const AstNode *caller, Token at,
+                   const AstNode **klass);
 
 enum { RT_LAMBAI, RT_THAPA, RT_HATA, RT_SANKHYA, RT_PADHA, RT_BUILTIN_COUNT };
 int rt_builtin_id(const char *name, int length);  /* -1 if not a builtin */

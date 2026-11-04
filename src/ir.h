@@ -12,7 +12,8 @@
  *
  * Every function has numbered local slots (parameters first, then named locals, then hidden
  * slots for loop counters). Function 0 is the top-level program: its named variables are
- * globals, but it still has hidden slots. Classes are not supported by the compiled backends. */
+ * globals, but it still has hidden slots. Every method is an ordinary function whose slot 0 is the
+ * object ('yo') and whose parameters follow. */
 
 typedef enum {
     IR_CONST_INT,     /* push a */
@@ -40,7 +41,13 @@ typedef enum {
     IR_CALL,          /* a = function index, b = argument count */
     IR_BUILTIN,       /* a = builtin id (rt.h), b = argument count */
     IR_RETURN,        /* pop the return value */
-    IR_PRINT
+    IR_PRINT,
+    IR_NEW_OBJECT,    /* push a new object of class a, every field 0 */
+    IR_INIT_FIELD,    /* pop a value into field a of the object now on top of the stack */
+    IR_DUP,           /* push another reference to the top of the stack */
+    IR_GET_FIELD,     /* pop object, push its field named by the token; a = class of the running method or -1 */
+    IR_SET_FIELD,     /* pop value, then object; assign the field named by the token; a = as for GET_FIELD */
+    IR_CALL_METHOD    /* stack: object, b args. Method named by the token; a = as for GET_FIELD */
 } IrOp;
 
 enum { IR_WHAT_CONDITION, IR_WHAT_INDEX, IR_WHAT_RANGE_START, IR_WHAT_RANGE_END };
@@ -67,6 +74,11 @@ typedef struct {
 } IrFunction;
 
 typedef struct {
+    const AstNode *decl;   /* the AST_CLASS node (outlives the program) */
+    int *method_fn;        /* method position in decl -> function index */
+} IrClass;
+
+typedef struct {
     IrFunction *functions;   /* [0] is the top-level program */
     int function_count;
     char **strings;
@@ -74,10 +86,12 @@ typedef struct {
     int string_count;
     Token *globals;          /* global variable names; the index is the global id */
     int global_count;
+    IrClass *classes;
+    int class_count;
 } IrProgram;
 
 /* Returns NULL (after reporting an error) when the program uses something the compiled
- * backends don't support, such as classes. */
+ * backends don't support. */
 IrProgram *ir_compile(AstNode *program, const char *source, const char *filename);
 void ir_optimize(IrProgram *program);
 void ir_finalize(IrProgram *program);   /* label positions, max stack depth; call after optimizing */
