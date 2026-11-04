@@ -1,0 +1,13 @@
+kaam abs(n) {
+    yedi n < 0 {
+        farkau -n
+    }
+    farkau n
+}
+kaam max(a, b) {
+    yedi a > b {
+        farkau a
+    }
+    farkau b
+}
+base = 100

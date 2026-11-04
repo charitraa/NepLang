@@ -1,0 +1,6 @@
+class A {
+    kaam banau() {
+    }
+}
+a = A()
+a.banau()

@@ -1,0 +1,18 @@
+ko_lagi c in "hi!" {
+    vana(c)
+}
+ko_lagi c in "" {
+    vana("never")
+}
+ganti = 0
+ko_lagi c in "banana" {
+    yedi c == "a" {
+        ganti = ganti + 1
+    }
+}
+vana(ganti)
+s = ""
+ko_lagi i in 0..5 {
+    s = s + i
+}
+vana(s)

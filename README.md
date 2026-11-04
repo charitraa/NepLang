@@ -180,7 +180,7 @@ build directly from PowerShell or `cmd`:
 
 ```powershell
 mkdir bin
-gcc -std=c11 -Wall -Wextra -Wpedantic -O2 -o bin\neplang.exe src\lexer.c src\ast.c src\parser.c src\interpreter.c src\diagnostics.c src\main.c
+gcc -std=c11 -Wall -Wextra -Wpedantic -O2 -o bin\neplang.exe src\lexer.c src\value.c src\ast.c src\parser.c src\interpreter.c src\diagnostics.c src\main.c
 bin\neplang.exe examples\hello_calc.np
 ```
 
@@ -233,6 +233,9 @@ The included examples:
 | `examples/variables.np` | Variables (simple-interest calculation) |
 | `examples/control_flow.np` | `yedi`, `jabasamma`, `ko_lagi` (primes below 30) |
 | `examples/functions.np` | `kaam` / `farkau`, recursion (factorial, GCD) |
+| `examples/arrays.np` | Arrays, `lambai`, looping over an array, a 2D matrix |
+| `examples/strings.np` | Strings, joining with `+`, reversing and counting characters |
+| `examples/classes.np` | Classes: fields, methods, `banau`, private `_` members |
 
 The example files are in the repository's
 [`examples/`](https://github.com/charitraa/Nepa/tree/main/examples) folder. Download one,
@@ -261,7 +264,9 @@ vana(10 + 20 * 3)    # 70
 
 ### Numbers and arithmetic
 
-Every value is currently an **integer**.
+A value is an **integer**, an **array**, a **string** or an **object** (see
+[Classes](#classes)). There are no decimal numbers
+yet.
 
 | Operator | Meaning | Example | Result |
 |---|---|---|---|
@@ -291,8 +296,9 @@ digits and `_`, so `baki` works but `bakī` does not.
 
 ### Comparisons
 
-`==  !=  <  <=  >  >=` give `1` for true and `0` for false. Any non-zero value counts as
-true. You can't chain comparisons: `a < b < c` is an error.
+`==  !=  <  <=  >  >=` give `1` for true and `0` for false. They compare two numbers or
+two strings (see [Strings](#strings)). A condition (`yedi`, `jabasamma`) must be a number:
+any non-zero value counts as true. You can't chain comparisons: `a < b < c` is an error.
 
 ### Conditionals: `yedi` / `natara yedi` / `natara`
 
@@ -352,6 +358,143 @@ vana(jamma(10, 20))    # 30
 - Functions are defined at the top level. You can't define a function inside another.
 - You can call a function as a statement by itself, e.g. `salam()`.
 
+### Arrays
+
+An array is a list of values in `[ ]`, separated by commas. Indexes start at `0`.
+
+```
+ank = [72, 45, 91]
+vana(ank[0])          # 72
+ank[1] = 50
+vana(ank)             # [72, 50, 91]
+vana(lambai(ank))     # 3
+
+ko_lagi x in ank {
+    vana(x)           # 72, 50, 91
+}
+```
+
+- An array can hold any values, including other arrays: `m[i][j]`.
+- A long array literal can span several lines.
+- Using an index outside `0` to `lambai(a) - 1` is an error.
+- Arrays are **shared**, not copied: after `b = a`, changing `b[0]` also changes `a[0]`.
+  The same happens when you pass an array to a function.
+
+### Strings
+
+A string is text in double quotes.
+
+```
+naam = "Charitra"
+vana("Namaste " + naam)        # Namaste Charitra
+vana("Umar: " + 22)            # Umar: 22
+vana(lambai(naam))             # 8
+vana(naam[0])                  # C
+
+ko_lagi akshar in "abc" {
+    vana(akshar)               # a, b, c
+}
+```
+
+- `+` joins two strings. If one side is a number, it is turned into text first. `+` works
+  left to right, so `"a" + 1 + 2` is `a12` but `1 + 2 + "a"` is `3a`.
+- `==` and `!=` check whether two strings have the same text. `<`, `>`, `<=` and `>=` use
+  dictionary order (`"apple" < "banana"`); every uppercase letter comes before every
+  lowercase one. Comparing a string with a number is an error.
+- `s[i]` is the character at index `i`, as a one-character string. `lambai(s)` is the
+  number of characters. Devanagari works: `lambai("नमस्ते")` is `6`, counting each letter
+  and vowel sign.
+- Strings can't be changed in place: `s[0] = "x"` is an error. Build a new string with
+  `+` instead.
+- Inside a string, `\n` is a new line, `\t` is a tab, `\"` is a quote and `\\` is a
+  backslash. A string must end on the line it starts on.
+- When an array is printed, the strings inside it are shown with quotes:
+  `vana(["a", 1])` prints `["a", 1]`.
+
+### Classes
+
+A `class` describes a kind of object: its **fields** (data) and **methods** (functions that
+belong to it). Call the class like a function to create an object.
+
+```
+class Manchhe {
+    naam = ""
+    umar = 0
+
+    kaam bolau() {
+        vana("Namaste " + naam)
+    }
+}
+
+manchhe = Manchhe()
+manchhe.naam = "Charitra"
+manchhe.umar = 22
+manchhe.bolau()          # Namaste Charitra
+vana(manchhe)            # Manchhe(naam="Charitra", umar=22)
+```
+
+**Fields.** Each field is listed in the class with its starting value, e.g. `umar = 0`.
+Every new object gets fresh starting values, so `saman = []` gives each object its own
+array. Using a field that the class doesn't list (`manchhe.umer = 5`) is an error, which
+catches typos.
+
+**Methods.** Methods are written with `kaam` inside the class and called with
+`object.method(...)`. Inside a method, a field's bare name (`naam`) means that field of the
+current object, and another method can be called by its bare name (`bolau()`).
+
+**`yo` (this object).** `yo` is the object the method was called on. You need it when a
+parameter has the same name as a field: the parameter wins, so write `yo.naam` to reach the
+field. A method can also `farkau yo` so calls can be chained: `g.badhau().badhau()`.
+
+**Constructor: `banau`.** A method named `banau` runs by itself when an object is created,
+and receives the arguments given to the class:
+
+```
+class Bindu {
+    x = 0
+    y = 0
+
+    kaam banau(x, y) {
+        yo.x = x
+        yo.y = y
+    }
+}
+
+b = Bindu(3, 4)
+vana(b.x)                # 3
+```
+
+`banau` can't return a value (the new object is always the result) and can't be called
+directly. A class without `banau` is created with no arguments: `Manchhe()`.
+
+**Private members.** A field or method whose name starts with `_` can only be used inside
+the methods of its own class:
+
+```
+class Khata {
+    _baki = 0
+
+    kaam jamma(rakam) {
+        _baki = _baki + rakam
+    }
+
+    kaam baki() {
+        farkau _baki
+    }
+}
+
+k = Khata()
+k.jamma(100)
+vana(k.baki())           # 100
+vana(k._baki)            # error: '_baki' is private to class 'Khata'
+```
+
+- Objects are **shared**, like arrays: after `b = a`, changing `b.naam` also changes
+  `a.naam`. Passing an object to a function shares it too.
+- Classes are defined at the top level. A class can be used before its definition in the
+  file. Class and function names share one namespace, so they can't clash.
+- Objects can't be compared with `==` yet, and there is no inheritance.
+
 ---
 
 ## Error messages
@@ -385,6 +528,11 @@ be used as variable names (`yedi = 5` is an error).
 | `in` | in | `in` |
 | `kaam` | work / task | `function` |
 | `farkau` | return / send back | `return` |
+| `class` | class | `class` |
+| `yo` | this | `this` / `self` |
+
+`banau` ("create") is not a keyword, but a method with that name is a class's constructor.
+`lambai` ("length") is a built-in function.
 
 ---
 
@@ -392,13 +540,15 @@ be used as variable names (`yedi = 5` is an error).
 
 NepLang is still early. These features are **not** available yet:
 
-- strings, floating-point numbers, booleans (`sahi`/`galat`-style)
-- logical operators (and / or / not)
-- `break` / `continue`
-- arrays, structs and classes, modules / `import`
-- expressions that span more than one line
+- floating-point numbers, a separate bool type (`sacho`/`jutho` are just 1 and 0), `khali` (null)
+- inheritance, interfaces, comparing objects with `==`
+- typed field declarations like `string naam` (planned with the type checker)
+- classes in the VM / native backends (interpreter only)
+- `"${...}"` pieces can't contain a `"` (a string ends at the next quote); write `\${` for a literal `${`
 
-They come in later milestones (see the [Roadmap](#roadmap)).
+Expressions may span lines after an operator, or inside `( )`, call arguments and `[ ]`.
+
+String interpolation: `"Mero naam ${naam} ho"` joins text and expressions.
 
 ---
 
@@ -438,6 +588,7 @@ source.np → Lexer → tokens → Parser (recursive descent) → AST → Interp
 | `src/parser.c` | Recursive-descent parser that builds the AST |
 | `src/ast.c` / `ast.h` | AST node types, constructors, and `ast_free` |
 | `src/interpreter.c` | Walks the AST and runs the program |
+| `src/value.c` / `value.h` | Runtime values: numbers, arrays, strings and objects |
 | `src/diagnostics.c` | Shared error reporter (file, line, column, caret) |
 | `src/main.c` | Reads the file and connects the pipeline |
 
@@ -480,14 +631,37 @@ install.ps1   one-line installer for Windows
 3. ✅ Conditionals: `yedi` / `natara`
 4. ✅ Loops: `jabasamma`, `ko_lagi`
 5. ✅ Functions: `kaam` / `farkau`
-6. Arrays
-7. Structs / classes
-8. Symbol table (hashed, scoped)
-9. Type checker
-10. Modules (`import`)
-11. Bytecode VM
-12. Intermediate representation (IR)
-13. Native code generation
+6. ✅ Arrays
+7. ✅ Strings
+8. ✅ Structs / classes
+9. ✅ Symbol table (hashed, scoped)
+10. ✅ Static checker (type inference: undefined names, argument counts, impossible operations)
+11. ✅ Modules (`import`)
+12. ✅ Bytecode VM (`--vm`)
+13. ✅ Intermediate representation (`--ir`, with constant folding and dead-code removal)
+14. ✅ Native code generation (`--emit-c`, `--build`: NepLang → C → executable)
+
+### Ways to run a program
+
+```bash
+neplang prog.np                  # tree-walking interpreter (supports everything)
+neplang --vm prog.np             # compile to bytecode, run on the virtual machine
+neplang --ir prog.np             # print the optimized intermediate representation
+neplang --emit-c prog.np         # print the generated C source
+neplang --build prog.np -o prog  # native executable (needs a C compiler: cc, or $CC)
+```
+
+All four execution paths share one runtime (`src/rt.c`) so they print identical output and
+identical error messages. Classes are interpreter-only for now: the compiled paths refuse
+them with a clear message. `--build` finds its runtime sources via `NEPLANG_RUNTIME`, else
+the installed `share/neplang/runtime`, else the checkout's `src/`. Native speed on
+`fib(30)`: interpreter 0.80 s, VM 0.52 s, native 0.10 s.
+
+### Modules
+
+`import "helpers.np"` (or `import math`, same as `import "math.np"`) splices another file's
+functions, classes and variables into the program. Files are looked up next to the importing
+file, then in each directory of `NEPLANG_PATH`; each file loads once, cycles are harmless.
 
 ---
 

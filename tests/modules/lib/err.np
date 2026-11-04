@@ -1,0 +1,3 @@
+kaam boom() {
+    farkau 1 / 0
+}

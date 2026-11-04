@@ -1,0 +1,18 @@
+naam = "Ram"
+n = 3
+vana("Mero naam ${naam} ho, ${n * 2}! \${raw}")
+vana("${n}")
+total = 1 +
+  2 +
+  3
+vana(total)
+vana(max2(
+  4,
+  9
+))
+kaam max2(a, b) {
+  yedi a > b {
+    farkau a
+  }
+  farkau b
+}

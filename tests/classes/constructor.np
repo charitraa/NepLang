@@ -1,0 +1,50 @@
+# 'banau' runs on creation; 'yo.x' reaches a field hidden by a parameter of the same name
+class Bindu {
+    x = 0
+    y = 0
+
+    kaam banau(x, y) {
+        yo.x = x
+        yo.y = y
+    }
+
+    kaam jod(arko) {
+        farkau Bindu(x + arko.x, y + arko.y)
+    }
+}
+
+a = Bindu(1, 2)
+b = Bindu(10, 20)
+vana(a.jod(b))
+
+# starting values are evaluated fresh for every object
+class Jhola {
+    saman = []
+    kaam banau(pahilo) {
+        saman = [pahilo]
+    }
+}
+j1 = Jhola("kalam")
+j2 = Jhola("kitab")
+vana(j1.saman)
+vana(j2.saman)
+
+# a starting value can use globals
+suru = 100
+class Khata {
+    baki = suru
+}
+vana(Khata().baki)
+
+# bare 'farkau' leaves banau early; the object is still returned
+class Umar {
+    barsa = 0
+    kaam banau(n) {
+        yedi n < 0 {
+            farkau
+        }
+        barsa = n
+    }
+}
+vana(Umar(-5).barsa)
+vana(Umar(30).barsa)

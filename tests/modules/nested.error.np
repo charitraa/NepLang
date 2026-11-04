@@ -1,0 +1,4 @@
+x = 1
+yedi x {
+    import "lib/mathx.np"
+}

@@ -1,0 +1,11 @@
+s = "Nepal"
+vana(lambai(s))
+vana(s[0])
+vana(s[lambai(s) - 1])
+vana(lambai(""))
+vana("abc"[1] + "abc"[2])
+# Devanagari: lambai and [ ] count characters, not bytes
+vana("नमस्ते")
+vana(lambai("नमस्ते"))
+vana("नमस्ते"[0])
+vana("नमस्ते"[1])

@@ -1,0 +1,38 @@
+# Milestone 7: strings
+
+naam = "Charitra"
+vana("Namaste " + naam + "!")
+vana("Mero umar " + 22 + " barsa ho")
+
+kaam ulto(text) {
+    r = ""
+    ko_lagi akshar in text {
+        r = akshar + r
+    }
+    farkau r
+}
+
+kaam ganau(text, khojne) {
+    ganti = 0
+    ko_lagi akshar in text {
+        yedi akshar == khojne {
+            ganti = ganti + 1
+        }
+    }
+    farkau ganti
+}
+
+vana(ulto("Kathmandu"))
+vana(ganau("Kathmandu", "a"))
+
+# Devanagari text works inside strings; lambai counts characters
+shahar = "काठमाडौं"
+vana(shahar)
+vana(lambai(shahar))
+
+saathi = ["Sita", "Hari", "Gita"]
+ko_lagi s in saathi {
+    yedi s < "H" {
+        vana(s + " comes before H")
+    }
+}

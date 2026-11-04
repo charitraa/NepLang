@@ -1,0 +1,25 @@
+# Primes below 30, using ra / wa / hoina, ruk / agadi, thapa / hata
+kaam abhajya(n) {
+    yedi n < 2 {
+        farkau 0
+    }
+    ko_lagi d in 2..n {
+        yedi d * d > n {
+            ruk
+        }
+        yedi n % d == 0 {
+            farkau 0
+        }
+    }
+    farkau 1
+}
+
+primes = []
+ko_lagi n in 0..30 {
+    yedi hoina abhajya(n) {
+        agadi
+    }
+    thapa(primes, n)
+}
+vana(primes)
+vana(hata(primes))

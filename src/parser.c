@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "parser.h"
 #include "diagnostics.h"
@@ -6,6 +7,7 @@
 static AstNode *parse_comparison(Parser *parser);
 static AstNode *parse_statement(Parser *parser);
 static void skip_newlines(Parser *parser);
+static int reject_keyword_as_name(Parser *parser, Token keyword);
 
 static void error_at(Parser *parser, Token token, const char *message);
 
@@ -17,7 +19,9 @@ static void advance(Parser *parser) {
     Token token = parser->current;
     if (token.type == TOKEN_ERROR) {
         char message[256];
-        if ((unsigned char)token.start[0] >= 0x80) {
+        if (parser->lexer->error_message) {
+            snprintf(message, sizeof(message), "%s", parser->lexer->error_message);
+        } else if ((unsigned char)token.start[0] >= 0x80) {
             snprintf(message, sizeof(message),
                      "Unexpected character '%.*s'. Names can only use English letters, digits, and '_'.",
                      token.length, token.start);
@@ -66,10 +70,13 @@ static int same_name(Token a, Token b) {
 static AstNode *parse_call(Parser *parser, Token name) {
     AstNode *call = ast_new_call(name);
     advance(parser);
+    skip_newlines(parser);
 
     if (!check(parser, TOKEN_RPAREN)) {
         do {
+            skip_newlines(parser);
             ast_call_add_arg(call, parse_comparison(parser));
+            skip_newlines(parser);
         } while (!parser->had_error && match(parser, TOKEN_COMMA));
     }
 
@@ -99,16 +106,121 @@ static AstNode *parse_array(Parser *parser) {
     return array;
 }
 
-/* Any number of trailing '[index]' after a value: a[i], m[i][j], f(x)[0]. */
+/* Any number of trailing '[index]', '.field' and '.method(args)' after a value:
+ * a[i], m[i][j], f(x)[0], p.naam, p.bolau(), p.saathi[0].naam. */
 static AstNode *parse_postfix(Parser *parser, AstNode *node) {
-    while (!parser->had_error && check(parser, TOKEN_LBRACKET)) {
-        Token open = parser->current;
-        advance(parser);
-        AstNode *index = parse_comparison(parser);
-        expect(parser, TOKEN_RBRACKET, "Expected ']' to close the index.");
-        node = ast_new_index(open, node, index);
+    while (!parser->had_error) {
+        if (check(parser, TOKEN_LBRACKET)) {
+            Token open = parser->current;
+            advance(parser);
+            AstNode *index = parse_comparison(parser);
+            expect(parser, TOKEN_RBRACKET, "Expected ']' to close the index.");
+            node = ast_new_index(open, node, index);
+        } else if (check(parser, TOKEN_DOT)) {
+            advance(parser);
+            Token name = expect(parser, TOKEN_IDENT, "Expected a field or method name after '.', e.g. 'p.naam'.");
+            if (parser->had_error) break;
+            if (check(parser, TOKEN_LPAREN)) {
+                AstNode *call = parse_call(parser, name);
+                call->as.call.receiver = node;
+                node = call;
+            } else {
+                node = ast_new_field(node, name);
+            }
+        } else {
+            break;
+        }
     }
     return node;
+}
+
+static void *checked_malloc(size_t n) {
+    void *p = malloc(n);
+    if (!p) {
+        fprintf(stderr, "neplang: out of memory\n");
+        exit(1);
+    }
+    return p;
+}
+
+/* Parses the source text of one "${...}" piece with a sub-parser that shares the main
+ * source buffer, so tokens (and error locations) point into the real file. */
+static AstNode *parse_interpolation(Parser *parser, Token literal, const char *from, const char *to) {
+    Lexer lexer;
+    lexer_init(&lexer, parser->source);
+    lexer.current = from;
+    lexer.end = to;
+    lexer.line = literal.line;
+    lexer.col = literal.col + (int)(from - literal.start);
+
+    Parser sub = *parser;
+    sub.lexer = &lexer;
+    sub.had_error = 0;
+    advance(&sub);
+    AstNode *expr;
+    if (sub.had_error) {
+        expr = ast_new_placeholder();
+    } else if (check(&sub, TOKEN_EOF)) {
+        error_at(&sub, literal, "Nothing inside '${ }'. Put an expression there, e.g. \"${naam}\".");
+        expr = ast_new_placeholder();
+    } else {
+        expr = parse_comparison(&sub);
+        if (!sub.had_error && !check(&sub, TOKEN_EOF)) {
+            error_at_current(&sub, "Unexpected text inside '${ }'. It must hold a single expression.");
+        }
+    }
+    if (sub.had_error) parser->had_error = 1;
+    return expr;
+}
+
+/* Decodes the escapes in a string literal token. The lexer has already checked them.
+ * "${expr}" pieces are turned into '"text" + (expr) + "text"' -- the leading string makes
+ * '+' join them as text. */
+static AstNode *parse_string(Parser *parser) {
+    Token literal = parser->current;
+    advance(parser);
+
+    const char *text = literal.start + 1;       /* skip the quotes */
+    int text_length = literal.length - 2;
+    char *chars = checked_malloc((size_t)text_length + 1);
+    int length = 0;
+    AstNode *result = NULL;
+    Token plus = literal;
+    plus.type = TOKEN_PLUS;
+
+    for (int i = 0; i < text_length; i++) {
+        char c = text[i];
+        if (c == '\\') {
+            i++;
+            switch (text[i]) {
+                case 'n': c = '\n'; break;
+                case 't': c = '\t'; break;
+                default:  c = text[i]; break;  /* '"', '\\' or '$' */
+            }
+        } else if (c == '$' && i + 1 < text_length && text[i + 1] == '{') {
+            const char *from = text + i + 2;
+            const char *close = memchr(from, '}', (size_t)(text_length - i - 2));
+            if (!close) {
+                error_at(parser, literal, "This '${' is never closed. Add a matching '}'.");
+                free(chars);
+                return ast_new_placeholder();
+            }
+            AstNode *piece = ast_new_string(literal, chars, length);
+            result = result ? ast_new_binop(plus, result, piece) : piece;
+            AstNode *expr = parse_interpolation(parser, literal, from, close);
+            result = ast_new_binop(plus, result, expr);
+            chars = checked_malloc((size_t)text_length + 1);
+            length = 0;
+            i = (int)(close - text);
+            continue;
+        }
+        chars[length++] = c;
+    }
+    AstNode *tail = ast_new_string(literal, chars, length);
+    if (!result) return tail;
+    if (length > 0) result = ast_new_binop(plus, result, tail);
+    else ast_free(tail);
+    return result;
 }
 
 static AstNode *parse_primary(Parser *parser) {
@@ -116,6 +228,10 @@ static AstNode *parse_primary(Parser *parser) {
         Token literal = parser->current;
         advance(parser);
         return ast_new_number(literal);
+    }
+
+    if (check(parser, TOKEN_STRING)) {
+        return parse_string(parser);
     }
 
     if (check(parser, TOKEN_IDENT)) {
@@ -131,14 +247,30 @@ static AstNode *parse_primary(Parser *parser) {
         return parse_array(parser);
     }
 
+    if (check(parser, TOKEN_YO)) {
+        Token keyword = parser->current;
+        advance(parser);
+        if (reject_keyword_as_name(parser, keyword)) {
+            return ast_new_placeholder();
+        }
+        if (!parser->in_method) {
+            error_at(parser, keyword,
+                     "'yo' means 'this object' and can only be used inside the methods of a class.");
+            return ast_new_placeholder();
+        }
+        return ast_new_self(keyword);
+    }
+
     if (check(parser, TOKEN_LPAREN)) {
         advance(parser);
+        skip_newlines(parser);
         AstNode *inner = parse_comparison(parser);
+        skip_newlines(parser);
         expect(parser, TOKEN_RPAREN, "Expected ')' to close the expression.");
         return inner;
     }
 
-    error_at_current(parser, "Expected a number, a variable, '(', '[', or a sign here.");
+    error_at_current(parser, "Expected a value here: a number, a string, a variable, '(', '[', or a sign.");
     return ast_new_placeholder();
 }
 
@@ -162,6 +294,7 @@ static AstNode *parse_term(Parser *parser) {
            (check(parser, TOKEN_STAR) || check(parser, TOKEN_SLASH) || check(parser, TOKEN_PERCENT))) {
         Token op = parser->current;
         advance(parser);
+        skip_newlines(parser);
         AstNode *right = parse_factor(parser);
         left = ast_new_binop(op, left, right);
     }
@@ -175,6 +308,7 @@ static AstNode *parse_expr(Parser *parser) {
     while (!parser->had_error && (check(parser, TOKEN_PLUS) || check(parser, TOKEN_MINUS))) {
         Token op = parser->current;
         advance(parser);
+        skip_newlines(parser);
         AstNode *right = parse_term(parser);
         left = ast_new_binop(op, left, right);
     }
@@ -190,12 +324,13 @@ static int is_comparison(TokenType type) {
 
 /* Comparisons are non-associative: 'a < b < c' is rejected rather than
  * silently meaning '(a < b) < c'. */
-static AstNode *parse_comparison(Parser *parser) {
+static AstNode *parse_compare(Parser *parser) {
     AstNode *left = parse_expr(parser);
 
     if (!parser->had_error && is_comparison(parser->current.type)) {
         Token op = parser->current;
         advance(parser);
+        skip_newlines(parser);
         AstNode *right = parse_expr(parser);
         left = ast_new_binop(op, left, right);
 
@@ -205,6 +340,38 @@ static AstNode *parse_comparison(Parser *parser) {
         }
     }
 
+    return left;
+}
+
+static AstNode *parse_not(Parser *parser) {
+    if (!parser->had_error && check(parser, TOKEN_HOINA)) {
+        Token op = parser->current;
+        advance(parser);
+        return ast_new_unary(op, parse_not(parser));
+    }
+    return parse_compare(parser);
+}
+
+static AstNode *parse_and(Parser *parser) {
+    AstNode *left = parse_not(parser);
+    while (!parser->had_error && check(parser, TOKEN_RA)) {
+        Token op = parser->current;
+        advance(parser);
+        skip_newlines(parser);
+        left = ast_new_binop(op, left, parse_not(parser));
+    }
+    return left;
+}
+
+/* Full expression: 'wa' (or) binds loosest, then 'ra' (and), then 'hoina' (not), then comparisons. */
+static AstNode *parse_comparison(Parser *parser) {
+    AstNode *left = parse_and(parser);
+    while (!parser->had_error && check(parser, TOKEN_WA)) {
+        Token op = parser->current;
+        advance(parser);
+        skip_newlines(parser);
+        left = ast_new_binop(op, left, parse_and(parser));
+    }
     return left;
 }
 
@@ -233,33 +400,37 @@ static AstNode *parse_print(Parser *parser) {
     return ast_new_print(expr);
 }
 
+/* A statement starting with a name or 'yo': an assignment to a variable ('x = 1'), an array
+ * item ('a[i] = 1') or a field ('p.naam = 1'), or a function/method call used on its own. */
 static AstNode *parse_assignment(Parser *parser) {
-    Token name = parser->current;
-    advance(parser);
+    Token start = parser->current;
+    AstNode *target = parse_postfix(parser, parse_primary(parser));
+    if (parser->had_error) return target;
 
-    if (check(parser, TOKEN_LPAREN)) {
-        return parse_call(parser, name);
-    }
+    if (check(parser, TOKEN_EQUAL)) {
+        if (target->type != AST_VARIABLE && target->type != AST_INDEX && target->type != AST_FIELD) {
+            error_at_current(parser, "Can't assign to this. The left side of '=' must be a variable, an array "
+                                     "item like 'a[0]', or a field like 'p.naam'.");
+            return target;
+        }
+        advance(parser);
+        AstNode *value = parse_comparison(parser);
 
-    /* name[i]... = value */
-    AstNode *target = NULL;
-    if (check(parser, TOKEN_LBRACKET)) {
-        target = parse_postfix(parser, ast_new_variable(name));
-    }
-
-    if (!check(parser, TOKEN_EQUAL)) {
-        error_at(parser, name,
-                 "Unknown statement. Use 'vana(...)' to print, 'name = value' to assign, or 'name(...)' to call a function.");
+        if (target->type == AST_INDEX) return ast_new_index_assign(target, value);
+        if (target->type == AST_FIELD) return ast_new_field_assign(target, value);
+        Token name = target->as.variable.name;
         ast_free(target);
-        return ast_new_placeholder();
+        return ast_new_assign(name, value);
     }
-    advance(parser);
 
-    AstNode *value = parse_comparison(parser);
-    if (target) {
-        return ast_new_index_assign(target, value);
+    if (target->type == AST_CALL) {
+        return target;
     }
-    return ast_new_assign(name, value);
+
+    error_at(parser, start,
+             "Unknown statement. Use 'vana(...)' to print, 'name = value' to assign, or 'name(...)' to call a function.");
+    ast_free(target);
+    return ast_new_placeholder();
 }
 
 static void skip_newlines(Parser *parser) {
@@ -350,7 +521,9 @@ static AstNode *parse_while(Parser *parser) {
     advance(parser);
 
     AstNode *condition = parse_condition(parser, keyword);
+    parser->loop_depth++;
     AstNode *body = parse_block(parser, "the 'jabasamma' condition");
+    parser->loop_depth--;
     return ast_new_while(condition, body);
 }
 
@@ -372,13 +545,17 @@ static AstNode *parse_for(Parser *parser) {
         if (!check(parser, TOKEN_LBRACE)) {
             error_at_current(parser, "Expected '..' for a range like '0..10', or '{' to loop over an array.");
         }
+        parser->loop_depth++;
         AstNode *body = parse_block(parser, "the 'ko_lagi' array");
+        parser->loop_depth--;
         return ast_new_for_each(var, start, body);
     }
 
     expect(parser, TOKEN_DOT_DOT, "Expected '..' between the start and end of the range, e.g. '0..10'.");
     AstNode *end = parse_expr(parser);
+    parser->loop_depth++;
     AstNode *body = parse_block(parser, "the 'ko_lagi' range");
+    parser->loop_depth--;
     return ast_new_for(var, start, end, body);
 }
 
@@ -420,9 +597,103 @@ static AstNode *parse_function(Parser *parser) {
     expect(parser, TOKEN_RPAREN, "Expected ',' or ')' in the parameter list.");
 
     parser->in_function = 1;
+    parser->in_constructor = parser->in_method && same_name(name, (Token){ .start = "banau", .length = 5 });
     function->as.function.body = parse_block(parser, "the function's parameter list");
     parser->in_function = 0;
+    parser->in_constructor = 0;
     return function;
+}
+
+/* Reports `name` if a field or method of `class_decl` already uses it. */
+static void check_member_name(Parser *parser, AstNode *class_decl, Token name) {
+    char message[256];
+    for (int i = 0; i < class_decl->as.class_decl.field_count; i++) {
+        if (same_name(class_decl->as.class_decl.fields[i].name, name)) {
+            snprintf(message, sizeof(message), "This class already has a field named '%.*s' (line %d).",
+                     name.length, name.start, class_decl->as.class_decl.fields[i].name.line);
+            error_at(parser, name, message);
+            return;
+        }
+    }
+    for (int i = 0; i < class_decl->as.class_decl.method_count; i++) {
+        Token method = class_decl->as.class_decl.methods[i]->as.function.name;
+        if (same_name(method, name)) {
+            snprintf(message, sizeof(message), "This class already has a method named '%.*s' (line %d).",
+                     name.length, name.start, method.line);
+            error_at(parser, name, message);
+            return;
+        }
+    }
+}
+
+/* class NAME {
+ *     FIELD = starting value
+ *     kaam METHOD(PARAM, ...) { ... }
+ * }
+ * Only allowed at the top level. A method named 'banau' is the constructor. */
+static AstNode *parse_class(Parser *parser) {
+    Token keyword = parser->current;
+    advance(parser);
+
+    if (reject_keyword_as_name(parser, keyword)) {
+        return ast_new_placeholder();
+    }
+    if (parser->block_depth > 0) {
+        error_at(parser, keyword,
+                 "Classes must be defined at the top level of the file, not inside a block or a function.");
+        return ast_new_placeholder();
+    }
+
+    Token name = expect(parser, TOKEN_IDENT, "Expected a class name after 'class', e.g. 'class Manchhe {'.");
+    AstNode *class_decl = ast_new_class(name);
+    if (parser->had_error) return class_decl;
+
+    Token open = parser->current;
+    expect(parser, TOKEN_LBRACE, "Expected '{' after the class name, e.g. 'class Manchhe {'.");
+    skip_newlines(parser);
+
+    while (!parser->had_error && !check(parser, TOKEN_RBRACE) && !check(parser, TOKEN_EOF)) {
+        if (check(parser, TOKEN_KAAM)) {
+            parser->in_method = 1;
+            AstNode *method = parse_function(parser);
+            parser->in_method = 0;
+            if (method->type != AST_FUNCTION) {
+                ast_free(method);
+                break;
+            }
+            check_member_name(parser, class_decl, method->as.function.name);
+            ast_class_add_method(class_decl, method);
+        } else if (check(parser, TOKEN_IDENT)) {
+            Token field = parser->current;
+            advance(parser);
+            if (!check(parser, TOKEN_EQUAL)) {
+                char message[256];
+                snprintf(message, sizeof(message),
+                         "Expected '=' and a starting value for the field, e.g. '%.*s = 0'.", field.length, field.start);
+                error_at_current(parser, message);
+                break;
+            }
+            advance(parser);
+            AstNode *value = parse_comparison(parser);
+            check_member_name(parser, class_decl, field);
+            ast_class_add_field(class_decl, field, value);
+        } else {
+            error_at_current(parser, "A class can only contain fields (e.g. 'naam = \"\"') and methods "
+                                     "(e.g. 'kaam bolau() { ... }').");
+            break;
+        }
+
+        if (!parser->had_error && !check(parser, TOKEN_NEWLINE) && !check(parser, TOKEN_RBRACE)) {
+            error_at_current(parser, "Unexpected extra input. Each field and method must start on its own line.");
+        }
+        skip_newlines(parser);
+    }
+
+    if (!parser->had_error && !check(parser, TOKEN_RBRACE)) {
+        error_at(parser, open, "This '{' is never closed. Add a matching '}' to end the class.");
+    }
+    if (!parser->had_error) advance(parser);
+    return class_decl;
 }
 
 static AstNode *parse_return(Parser *parser) {
@@ -439,9 +710,64 @@ static AstNode *parse_return(Parser *parser) {
 
     AstNode *value = NULL;
     if (!check(parser, TOKEN_NEWLINE) && !check(parser, TOKEN_RBRACE) && !check(parser, TOKEN_EOF)) {
+        if (parser->in_constructor) {
+            error_at(parser, keyword, "'banau' can't return a value: it always gives back the new object. "
+                                      "Use a plain 'farkau' to leave early.");
+            return ast_new_placeholder();
+        }
         value = parse_comparison(parser);
     }
     return ast_new_return(keyword, value);
+}
+
+static AstNode *parse_loop_jump(Parser *parser) {
+    Token keyword = parser->current;
+    AstType type = keyword.type == TOKEN_RUK ? AST_BREAK : AST_CONTINUE;
+    advance(parser);
+
+    if (reject_keyword_as_name(parser, keyword)) {
+        return ast_new_placeholder();
+    }
+    if (parser->loop_depth == 0) {
+        char message[128];
+        snprintf(message, sizeof(message), "'%.*s' can only be used inside a loop ('jabasamma' or 'ko_lagi').",
+                 keyword.length, keyword.start);
+        error_at(parser, keyword, message);
+        return ast_new_placeholder();
+    }
+    return ast_new_loop_jump(type, keyword);
+}
+
+/* import "path/to/file.np"   or   import math   (same as import "math.np") */
+static AstNode *parse_import(Parser *parser) {
+    Token keyword = parser->current;
+    advance(parser);
+
+    if (reject_keyword_as_name(parser, keyword)) {
+        return ast_new_placeholder();
+    }
+    if (parser->block_depth > 0) {
+        error_at(parser, keyword, "'import' must be at the top level of the file, not inside a block or function.");
+        return ast_new_placeholder();
+    }
+    if (!check(parser, TOKEN_STRING) && !check(parser, TOKEN_IDENT)) {
+        error_at_current(parser, "Expected a module after 'import', e.g. 'import math' or 'import \"helpers.np\"'.");
+        return ast_new_placeholder();
+    }
+
+    Token target = parser->current;
+    int is_name = target.type == TOKEN_IDENT;
+    const char *text = is_name ? target.start : target.start + 1;
+    int length = is_name ? target.length : target.length - 2;
+    char *path = malloc((size_t)length + 1);
+    if (!path) {
+        fprintf(stderr, "neplang: out of memory\n");
+        exit(1);
+    }
+    memcpy(path, text, (size_t)length);
+    path[length] = '\0';
+    advance(parser);
+    return ast_new_import(keyword, path, is_name);
 }
 
 static AstNode *parse_statement(Parser *parser) {
@@ -460,8 +786,17 @@ static AstNode *parse_statement(Parser *parser) {
     if (check(parser, TOKEN_KAAM)) {
         return parse_function(parser);
     }
+    if (check(parser, TOKEN_IMPORT)) {
+        return parse_import(parser);
+    }
+    if (check(parser, TOKEN_RUK) || check(parser, TOKEN_AGADI)) {
+        return parse_loop_jump(parser);
+    }
     if (check(parser, TOKEN_FARKAU)) {
         return parse_return(parser);
+    }
+    if (check(parser, TOKEN_CLASS)) {
+        return parse_class(parser);
     }
     if (check(parser, TOKEN_IN)) {
         Token keyword = parser->current;
@@ -480,7 +815,7 @@ static AstNode *parse_statement(Parser *parser) {
         error_at_current(parser, "Unexpected '}'. There is no open '{' block here to close.");
         return ast_new_placeholder();
     }
-    if (check(parser, TOKEN_IDENT)) {
+    if (check(parser, TOKEN_IDENT) || check(parser, TOKEN_YO)) {
         return parse_assignment(parser);
     }
 
@@ -494,7 +829,10 @@ void parser_init(Parser *parser, Lexer *lexer, const char *source, const char *f
     parser->filename = filename;
     parser->had_error = 0;
     parser->block_depth = 0;
+    parser->loop_depth = 0;
     parser->in_function = 0;
+    parser->in_method = 0;
+    parser->in_constructor = 0;
     advance(parser);
 }
 

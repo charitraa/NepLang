@@ -1,0 +1,7 @@
+ok = sacho
+no = jutho
+vana(ok)
+vana(no)
+yedi ok ra hoina no {
+  vana("sahi")
+}

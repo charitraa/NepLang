@@ -1,0 +1,26 @@
+kaam ulto(x) {
+    r = ""
+    ko_lagi c in x {
+        r = c + r
+    }
+    farkau r
+}
+
+kaam dohoryau(x, n) {
+    r = ""
+    ko_lagi i in 0..n {
+        r = r + x
+    }
+    farkau r
+}
+
+vana(ulto("Nepal"))
+vana(ulto(""))
+vana(dohoryau("ab", 3))
+
+naam = ["Ram", "Sita", "Hari"]
+naam[1] = naam[1] + "!"
+vana(naam)
+ko_lagi n in naam {
+    vana("Namaste " + n)
+}

@@ -1,0 +1,9 @@
+# string literals, joining with +, numbers joined into text
+naam = "Charitra"
+vana("Namaste " + naam)
+vana("Umar: " + 22)
+vana(5 + " jana")
+vana("a" + 1 + 2)
+vana(1 + 2 + "a")
+vana("")
+vana("" + "")

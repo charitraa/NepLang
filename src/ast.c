@@ -41,6 +41,13 @@ AstNode *ast_new_number(Token literal) {
     return node;
 }
 
+AstNode *ast_new_string(Token literal, char *chars, int length) {
+    AstNode *node = ast_alloc(AST_STRING, literal);
+    node->as.string.chars = chars;
+    node->as.string.length = length;
+    return node;
+}
+
 /* Stand-in node returned by the parser after a syntax error; never executed. */
 AstNode *ast_new_placeholder(void) {
     return ast_alloc(AST_NUMBER, no_token());
@@ -56,7 +63,7 @@ AstNode *ast_new_binop(Token op, AstNode *left, AstNode *right) {
 
 AstNode *ast_new_unary(Token op, AstNode *operand) {
     AstNode *node = ast_alloc(AST_UNARY, op);
-    node->as.unary.op = op.start[0];
+    node->as.unary.op = op.type == TOKEN_HOINA ? '!' : op.start[0];
     node->as.unary.operand = operand;
     return node;
 }
@@ -155,6 +162,7 @@ void ast_function_add_param(AstNode *function, Token param) {
 AstNode *ast_new_call(Token name) {
     AstNode *node = ast_alloc(AST_CALL, name);
     node->as.call.name = name;
+    node->as.call.receiver = NULL;
     node->as.call.args = NULL;
     node->as.call.arg_count = 0;
     node->as.call.arg_capacity = 0;
@@ -172,6 +180,55 @@ AstNode *ast_new_return(Token keyword, AstNode *value) {
     node->as.return_stmt.keyword = keyword;
     node->as.return_stmt.value = value;
     return node;
+}
+
+AstNode *ast_new_import(Token keyword, char *path, int is_name) {
+    AstNode *node = ast_alloc(AST_IMPORT, keyword);
+    node->as.import_stmt.path = path;
+    node->as.import_stmt.is_name = is_name;
+    return node;
+}
+
+AstNode *ast_new_loop_jump(AstType type, Token keyword) {
+    return ast_alloc(type, keyword);
+}
+
+AstNode *ast_new_class(Token name) {
+    AstNode *node = ast_alloc(AST_CLASS, name);
+    node->as.class_decl.name = name;
+    return node;
+}
+
+void ast_class_add_field(AstNode *class_decl, Token name, AstNode *value) {
+    class_decl->as.class_decl.fields = grow_array(class_decl->as.class_decl.fields, class_decl->as.class_decl.field_count,
+                                                  &class_decl->as.class_decl.field_capacity, sizeof(AstField));
+    AstField *field = &class_decl->as.class_decl.fields[class_decl->as.class_decl.field_count++];
+    field->name = name;
+    field->value = value;
+}
+
+void ast_class_add_method(AstNode *class_decl, AstNode *method) {
+    class_decl->as.class_decl.methods = grow_array(class_decl->as.class_decl.methods, class_decl->as.class_decl.method_count,
+                                                   &class_decl->as.class_decl.method_capacity, sizeof(AstNode *));
+    class_decl->as.class_decl.methods[class_decl->as.class_decl.method_count++] = method;
+}
+
+AstNode *ast_new_field(AstNode *object, Token name) {
+    AstNode *node = ast_alloc(AST_FIELD, name);
+    node->as.field.object = object;
+    node->as.field.name = name;
+    return node;
+}
+
+AstNode *ast_new_field_assign(AstNode *target, AstNode *value) {
+    AstNode *node = ast_alloc(AST_FIELD_ASSIGN, target->token);
+    node->as.field_assign.target = target;
+    node->as.field_assign.value = value;
+    return node;
+}
+
+AstNode *ast_new_self(Token keyword) {
+    return ast_alloc(AST_SELF, keyword);
 }
 
 AstNode *ast_new_block(void) {
@@ -193,7 +250,16 @@ void ast_free(AstNode *node) {
 
     switch (node->type) {
         case AST_NUMBER:
+        case AST_BREAK:
+        case AST_CONTINUE:
         case AST_VARIABLE:
+        case AST_SELF:
+            break;
+        case AST_IMPORT:
+            free(node->as.import_stmt.path);
+            break;
+        case AST_STRING:
+            free(node->as.string.chars);
             break;
         case AST_BINOP:
             ast_free(node->as.binop.left);
@@ -245,6 +311,7 @@ void ast_free(AstNode *node) {
             ast_free(node->as.function.body);
             break;
         case AST_CALL:
+            ast_free(node->as.call.receiver);
             for (int i = 0; i < node->as.call.arg_count; i++) {
                 ast_free(node->as.call.args[i]);
             }
@@ -252,6 +319,23 @@ void ast_free(AstNode *node) {
             break;
         case AST_RETURN:
             ast_free(node->as.return_stmt.value);
+            break;
+        case AST_CLASS:
+            for (int i = 0; i < node->as.class_decl.field_count; i++) {
+                ast_free(node->as.class_decl.fields[i].value);
+            }
+            free(node->as.class_decl.fields);
+            for (int i = 0; i < node->as.class_decl.method_count; i++) {
+                ast_free(node->as.class_decl.methods[i]);
+            }
+            free(node->as.class_decl.methods);
+            break;
+        case AST_FIELD:
+            ast_free(node->as.field.object);
+            break;
+        case AST_FIELD_ASSIGN:
+            ast_free(node->as.field_assign.target);
+            ast_free(node->as.field_assign.value);
             break;
         case AST_BLOCK:
             for (int i = 0; i < node->as.block.count; i++) {

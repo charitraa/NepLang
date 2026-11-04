@@ -1,0 +1,24 @@
+a = 5
+yedi a > 1 ra a < 10 {
+    vana("in range")
+}
+yedi a < 1 wa a == 5 {
+    vana("or works")
+}
+yedi hoina a == 4 {
+    vana("not works")
+}
+vana(1 wa 0)
+vana(0 ra 1)
+vana(hoina 0)
+vana(2 ra 3)
+# short-circuit: right side must not run (would divide by zero)
+yedi 0 ra 1 / 0 {
+    vana("bad")
+}
+yedi 1 wa 1 / 0 {
+    vana("short-circuit ok")
+}
+yedi 1 wa 0 ra 0 {
+    vana("ra binds tighter than wa")
+}

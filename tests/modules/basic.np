@@ -1,0 +1,8 @@
+import "lib/mathx.np"
+import "lib/shapes.np"
+import "lib/mathx.np"
+vana(abs(-5))
+vana(max(3, 9))
+vana(base)
+r = Rect(3, 4)
+vana(r.area())

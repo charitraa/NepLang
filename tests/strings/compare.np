@@ -1,0 +1,16 @@
+vana("abc" == "abc")
+vana("abc" == "abd")
+vana("abc" != "abd")
+vana("apple" < "banana")
+vana("ab" < "abc")
+vana("b" > "abc")
+vana("Z" < "a")
+vana("x" <= "x")
+vana("x" >= "y")
+vana("x" + "y" == "xy")
+naam = "Sita"
+yedi naam == "Sita" {
+    vana("Namaste Sita")
+} natara {
+    vana("Ko ho?")
+}

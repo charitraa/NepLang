@@ -3,6 +3,7 @@
 
 typedef enum {
     TOKEN_INT,
+    TOKEN_STRING,   /* the slice includes both quotes; escapes are decoded by the parser */
     TOKEN_PLUS,
     TOKEN_MINUS,
     TOKEN_STAR,
@@ -21,6 +22,7 @@ typedef enum {
     TOKEN_RBRACE,
     TOKEN_LBRACKET,
     TOKEN_RBRACKET,
+    TOKEN_DOT,
     TOKEN_DOT_DOT,
     TOKEN_COMMA,
     TOKEN_NEWLINE,
@@ -33,6 +35,14 @@ typedef enum {
     TOKEN_IN,
     TOKEN_KAAM,
     TOKEN_FARKAU,
+    TOKEN_CLASS,
+    TOKEN_YO,
+    TOKEN_RA,       /* and */
+    TOKEN_WA,       /* or */
+    TOKEN_HOINA,    /* not */
+    TOKEN_RUK,      /* break */
+    TOKEN_AGADI,    /* continue */
+    TOKEN_IMPORT,
     TOKEN_EOF,
     TOKEN_ERROR
 } TokenType;

@@ -1,0 +1,5 @@
+class A {
+    kaam f() {
+    }
+}
+vana(A().f)

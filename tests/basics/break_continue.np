@@ -1,0 +1,39 @@
+ko_lagi i in 0..10 {
+    yedi i == 2 {
+        agadi
+    }
+    yedi i == 5 {
+        ruk
+    }
+    vana(i)
+}
+n = 0
+jabasamma 1 {
+    n = n + 1
+    yedi n % 2 == 0 {
+        agadi
+    }
+    yedi n > 7 {
+        ruk
+    }
+    vana(n)
+}
+kaam khoj(a, x) {
+    ko_lagi v in a {
+        yedi v == x {
+            farkau 1
+        }
+    }
+    farkau 0
+}
+vana(khoj([4, 5, 6], 5))
+vana(khoj([4, 5, 6], 9))
+# break only leaves the inner loop
+ko_lagi i in 0..3 {
+    ko_lagi j in 0..3 {
+        yedi j == 1 {
+            ruk
+        }
+        vana(i * 10 + j)
+    }
+}

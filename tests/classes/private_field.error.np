@@ -1,0 +1,4 @@
+class A {
+    _x = 0
+}
+vana(A()._x)

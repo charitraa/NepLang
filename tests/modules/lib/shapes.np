@@ -1,0 +1,12 @@
+import "mathx.np"
+class Rect {
+    w = 0
+    h = 0
+    kaam banau(w, h) {
+        yo.w = w
+        yo.h = h
+    }
+    kaam area() {
+        farkau yo.w * yo.h
+    }
+}

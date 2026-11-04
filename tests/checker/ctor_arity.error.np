@@ -1,0 +1,7 @@
+class P {
+    x = 0
+    kaam banau(a) {
+        yo.x = a
+    }
+}
+p = P()

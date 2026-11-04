@@ -1,0 +1,33 @@
+# members starting with '_' can be used only inside the class's own methods
+class Khata {
+    _baki = 0
+
+    kaam banau(suru) {
+        _baki = suru
+    }
+
+    kaam jamma(rakam) {
+        yedi _thik(rakam) {
+            _baki = _baki + rakam
+        }
+    }
+
+    kaam _thik(rakam) {
+        farkau rakam > 0
+    }
+
+    kaam baki() {
+        farkau _baki
+    }
+
+    kaam saar(arko) {
+        # another object of the same class may use the private field
+        farkau _baki + arko._baki
+    }
+}
+
+k = Khata(100)
+k.jamma(50)
+k.jamma(-20)
+vana(k.baki())
+vana(k.saar(Khata(1)))

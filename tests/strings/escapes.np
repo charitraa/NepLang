@@ -1,0 +1,5 @@
+vana("ek\tdui")
+vana("line1\nline2")
+vana("usle \"namaste\" bhanyo")
+vana("C:\\nepal")
+vana(["a", "b, c", "q\"x", "tab\there", 1])

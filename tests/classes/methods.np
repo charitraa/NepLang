@@ -1,0 +1,43 @@
+# methods calling methods, recursion, returning 'yo', globals, method on a call result
+dar = 2
+
+class Ganak {
+    n = 0
+
+    kaam badhau() {
+        n = n + dar
+        farkau yo
+    }
+
+    kaam fact(k) {
+        yedi k <= 1 {
+            farkau 1
+        }
+        farkau k * fact(k - 1)
+    }
+
+    kaam dobbar() {
+        badhau()
+        yo.badhau()
+    }
+}
+
+g = Ganak()
+g.badhau().badhau()
+vana(g.n)
+g.dobbar()
+vana(g.n)
+vana(g.fact(5))
+vana(Ganak().badhau().n)
+
+# a parameter or loop variable named like a field stays local
+class T {
+    i = 100
+    kaam chalau() {
+        ko_lagi i in 0..3 {
+        }
+        vana(i)
+        vana(yo.i)
+    }
+}
+T().chalau()

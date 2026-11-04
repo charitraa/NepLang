@@ -1,0 +1,16 @@
+a = []
+ko_lagi i in 1..4 {
+    thapa(a, i * i)
+}
+vana(a)
+vana(hata(a))
+vana(a)
+thapa(a, "x")
+vana(lambai(a))
+kaam add(arr) {
+    thapa(arr, 99)
+}
+add(a)
+vana(a)
+vana(sankhya("42") + 1)
+vana(sankhya("  -7 "))

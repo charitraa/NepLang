@@ -1,0 +1,22 @@
+# fields, methods, bare field names inside methods (spec example)
+class Manchhe {
+    naam = ""
+    umar = 0
+
+    kaam bolau() {
+        vana("Namaste " + naam)
+    }
+
+    kaam barsa_badhau() {
+        umar = umar + 1
+    }
+}
+
+manchhe = Manchhe()
+manchhe.naam = "Charitra"
+manchhe.umar = 22
+manchhe.bolau()
+manchhe.barsa_badhau()
+vana(manchhe.umar)
+vana(manchhe)
+vana(Manchhe())

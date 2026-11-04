@@ -3,6 +3,7 @@
 neplang \- run a NepLang program
 .SH SYNOPSIS
 .B neplang
+[\fB\-\-vm\fR | \fB\-\-ir\fR | \fB\-\-emit\-c\fR | \fB\-\-build\fR \fB\-o\fR \fIout\fR]
 .I file.np
 .SH DESCRIPTION
 .B neplang
@@ -43,10 +44,53 @@ up to, but not including,
 Define a function;
 .B farkau
 returns a value.
+.TP
+.B ko_lagi x in arr { }
+Loop over the items of an array, or the characters of a string.
+.TP
+.B [1, 2, 3]  a[i]  a[i] = v  lambai(a)
+Arrays: literal, indexing from 0, item assignment, length.
+.TP
+.B \(dqNamaste \(dq + naam
+Strings: double-quoted, with escapes
+.BR \en ,
+.BR \et ,
+.B \e\(dq
+and
+.BR \e\e .
+.B +
+joins strings (a number on either side is turned into text);
+.B s[i]
+is the i-th character and
+.B lambai(s)
+the number of characters. Strings can't be changed in place.
+.TP
+.B class Name { field = 0 ... kaam method() { } }
+Define a class. Create an object with
+.BR Name(...) ,
+which runs the method
+.B banau
+(the constructor) if there is one. Use
+.B obj.field
+and
+.BR obj.method(...) .
+Inside a method, bare field names refer to the current object, and
+.B yo
+is the object itself. Fields and methods whose names start with
+.B _
+are private to the class.
 .PP
-Values are integers. Comparisons
+Values are integers, arrays, strings and objects. Comparisons
 .B "== != < <= > >="
-give 1 or 0, and any non-zero value is true.
+work on two numbers or two strings and give 1 or 0. A condition must be a number;
+any non-zero value is true.
+.SH MODES
+With no option the program runs on the tree-walking interpreter. \fB\-\-vm\fR compiles it to bytecode and runs it on the virtual machine.
+\fB\-\-ir\fR prints the optimized intermediate representation. \fB\-\-emit\-c\fR prints the generated C source.
+\fB\-\-build\fR \fB\-o\fR \fIout\fR produces a native executable using the system C compiler (\fBCC\fR or \fBcc\fR).
+Classes are supported by the interpreter only.
+.SH MODULES
+\fBimport "file.np"\fR or \fBimport name\fR includes another file. Files are searched next to the importing file, then in the directories listed in \fBNEPLANG_PATH\fR.
 .SH EXAMPLE
 .nf
 kaam factorial(n) {

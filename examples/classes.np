@@ -1,0 +1,60 @@
+# Milestone 8: classes
+
+class Khata {
+    malik = ""
+    _baki = 0          # '_' means private: only Khata's own methods can use it
+
+    # 'banau' runs when a Khata is created
+    kaam banau(malik, suru) {
+        yo.malik = malik
+        _baki = suru
+    }
+
+    kaam jamma(rakam) {
+        _baki = _baki + rakam
+    }
+
+    kaam jhika(rakam) {
+        yedi rakam > _baki {
+            vana(malik + ": paryapta paisa chaina")
+            farkau 0
+        }
+        _baki = _baki - rakam
+        farkau rakam
+    }
+
+    kaam baki() {
+        farkau _baki
+    }
+}
+
+sita = Khata("Sita", 1000)
+sita.jamma(500)
+sita.jhika(200)
+vana("Sita ko baki: " + sita.baki())
+
+hari = Khata("Hari", 100)
+hari.jhika(300)
+
+# objects are shared, like arrays
+kaam byaj_thap(khata, dar) {
+    khata.jamma(khata.baki() * dar / 100)
+}
+byaj_thap(sita, 10)
+vana("Byaj pachi: " + sita.baki())
+
+class Bindu {
+    x = 0
+    y = 0
+
+    kaam banau(x, y) {
+        yo.x = x
+        yo.y = y
+    }
+
+    kaam jod(arko) {
+        farkau Bindu(x + arko.x, y + arko.y)
+    }
+}
+
+vana(Bindu(1, 2).jod(Bindu(10, 20)))
