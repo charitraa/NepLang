@@ -2,11 +2,11 @@
 # Usage (from this folder):   makepkg -si
 # Remove again:               sudo pacman -R neplang
 pkgname=neplang
-pkgver=1.0.0
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="NepLang: a programming language with romanized Nepali keywords"
 arch=('x86_64' 'aarch64')
-url="https://github.com/charitraa/Nepa"
+url="https://github.com/charitraa/NepLang"
 license=('MIT')
 depends=('glibc')
 optdepends=('gcc: for "neplang build" (native executables)')

@@ -5,9 +5,9 @@ PackageLocale: en-US
 Publisher: Charitra Shrestha
 PublisherUrl: https://github.com/charitraa
 PackageName: NepLang
-PackageUrl: https://github.com/charitraa/Nepa
+PackageUrl: https://github.com/charitraa/NepLang
 License: MIT
-LicenseUrl: https://github.com/charitraa/Nepa/blob/main/LICENSE
+LicenseUrl: https://github.com/charitraa/NepLang/blob/main/LICENSE
 ShortDescription: Programming language with romanized Nepali keywords
 Description: NepLang mixes romanized Nepali control-flow words (vana, yedi, natara, jabasamma, ko_lagi, kaam, farkau) with English technical terms.
 Moniker: neplang
@@ -15,6 +15,6 @@ Tags:
   - programming-language
   - interpreter
   - nepali
-ReleaseNotesUrl: https://github.com/charitraa/Nepa/releases/tag/v@VERSION@
+ReleaseNotesUrl: https://github.com/charitraa/NepLang/releases/tag/v@VERSION@
 ManifestType: defaultLocale
 ManifestVersion: 1.6.0

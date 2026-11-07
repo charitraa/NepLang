@@ -1,0 +1,5 @@
+# Keep LF line endings everywhere (also in Windows checkouts) so test .expected files,
+# shell scripts and generated sources compare byte-for-byte.
+* text=auto eol=lf
+*.png binary
+*.ico binary

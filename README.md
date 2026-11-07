@@ -55,7 +55,7 @@ command works from any folder, just like `python`.
 
 ```bash
 sudo pacman -S --needed base-devel git
-git clone https://github.com/charitraa/Nepa.git neplang
+git clone https://github.com/charitraa/NepLang.git neplang
 cd neplang/packaging/arch
 makepkg -si
 ```
@@ -84,7 +84,7 @@ sudo make install        # installs to /usr/local
 2. Download, build and install:
 
    ```bash
-   git clone https://github.com/charitraa/Nepa.git neplang
+   git clone https://github.com/charitraa/NepLang.git neplang
    cd neplang
    make
    sudo make install
@@ -118,7 +118,7 @@ The easiest way is **MSYS2**, which gives you `gcc` and `make` and builds a norm
 
    ```bash
    pacman -S --needed mingw-w64-ucrt-x86_64-gcc make git
-   git clone https://github.com/charitraa/Nepa.git neplang
+   git clone https://github.com/charitraa/NepLang.git neplang
    cd neplang
    make
    ./bin/neplang examples/hello_calc.np
@@ -158,7 +158,7 @@ PowerShell, restart, open **Ubuntu**, and follow the [Linux steps](#ubuntu--debi
 
 ```bash
 xcode-select --install          # installs clang, make and git
-git clone https://github.com/charitraa/Nepa.git neplang
+git clone https://github.com/charitraa/NepLang.git neplang
 cd neplang
 make
 sudo make install
@@ -166,16 +166,16 @@ sudo make install
 
 ### Prebuilt binaries
 
-Ready-made binaries are on the [Releases page](https://github.com/charitraa/Nepa/releases).
+Ready-made binaries are on the [Releases page](https://github.com/charitraa/NepLang/releases).
 They can be older than the code in the repository, so build from source to get the newest
 features.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/charitraa/Nepa/main/install.sh | sh     # Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh     # Linux / macOS
 ```
 
 ```powershell
-irm https://raw.githubusercontent.com/charitraa/Nepa/main/install.ps1 | iex          # Windows PowerShell
+irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex          # Windows PowerShell
 ```
 
 ### Uninstall
@@ -945,8 +945,9 @@ neplang --build prog.np -o prog  # native executable (needs a C compiler: cc, or
 
 All execution paths share one runtime (`src/rt.c`) so they print identical output and
 identical error messages, every feature included (native programs report runtime errors without the
-source line). `--build` finds its runtime sources via `NEPLANG_RUNTIME`, else
-the installed `share/neplang/runtime`, else the checkout's `src/`. Native speed on
+source line). The runtime sources are built into the `neplang` binary, so `--build`
+only needs a C compiler (even with a downloaded prebuilt binary); set `NEPLANG_RUNTIME` to a
+runtime folder (e.g. the checkout's `src/`) to use those files instead. Native speed on
 `fib(30)`: interpreter 0.80 s, VM 0.52 s, native 0.10 s.
 
 ### Modules

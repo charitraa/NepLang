@@ -2,22 +2,22 @@
 # checksums and the release workflow pushes the result to charitraa/homebrew-neplang.
 class Neplang < Formula
   desc "Programming language with romanized Nepali keywords"
-  homepage "https://github.com/charitraa/Nepa"
+  homepage "https://github.com/charitraa/NepLang"
   version "@VERSION@"
   license "MIT"
 
   on_macos do
-    url "https://github.com/charitraa/Nepa/releases/download/v@VERSION@/neplang-macos-universal"
+    url "https://github.com/charitraa/NepLang/releases/download/v@VERSION@/neplang-macos-universal"
     sha256 "@SHA_MACOS@"
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/charitraa/Nepa/releases/download/v@VERSION@/neplang-linux-x86_64"
+      url "https://github.com/charitraa/NepLang/releases/download/v@VERSION@/neplang-linux-x86_64"
       sha256 "@SHA_LINUX_X86_64@"
     end
     on_arm do
-      url "https://github.com/charitraa/Nepa/releases/download/v@VERSION@/neplang-linux-arm64"
+      url "https://github.com/charitraa/NepLang/releases/download/v@VERSION@/neplang-linux-arm64"
       sha256 "@SHA_LINUX_ARM64@"
     end
   end

@@ -12,7 +12,7 @@ description: |
   Programming language with romanized Nepali keywords.
   NepLang mixes romanized Nepali control-flow words (vana, yedi, natara,
   jabasamma, ko_lagi, kaam, farkau) with English technical terms.
-homepage: https://github.com/charitraa/Nepa
+homepage: https://github.com/charitraa/NepLang
 license: MIT
 
 contents:

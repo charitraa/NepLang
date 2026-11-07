@@ -1,13 +1,13 @@
 # NepLang installer for Windows (PowerShell).
 #
-#   irm https://raw.githubusercontent.com/charitraa/Nepa/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex
 #
 # Downloads the prebuilt neplang.exe from the latest GitHub Release into
 # %LOCALAPPDATA%\Programs\neplang and adds that folder to your user PATH.
 # Set $env:NEPLANG_VERSION (e.g. "v0.5.0") to install a specific release.
 $ErrorActionPreference = "Stop"
 
-$Repo = "charitraa/Nepa"
+$Repo = "charitraa/NepLang"
 $Asset = "neplang-windows-x86_64.exe"
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\neplang"
 $Version = if ($env:NEPLANG_VERSION) { $env:NEPLANG_VERSION } else { "latest" }

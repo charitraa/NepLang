@@ -33,6 +33,7 @@ for src in "$DIR"/*.np; do
     [ -e "$expected_file" ] || continue
 
     actual=$("$BIN" "$src" 2>/dev/null)
+    actual=${actual//$'\r'/}   # Windows programs print \r\n
     expected=$(cat "$expected_file")
 
     if [ "$actual" == "$expected" ]; then
@@ -57,7 +58,7 @@ fi
 
 # cli_check NAME EXPECTED ACTUAL
 cli_check() {
-    if [ "$3" == "$2" ]; then
+    if [ "${3//$'\r'/}" == "$2" ]; then
         echo "PASS  $1"
         pass=$((pass + 1))
     else
@@ -76,7 +77,7 @@ cli_check "check subcommand" "$TMPDIR_CLI/args.np: no errors found." "$("$BIN" c
 cli_check "check reports errors" "1" "$?"
 
 # the REPL: expressions are echoed, state persists, errors don't end the session
-repl_out=$(printf 'x = 5\nx * 2\nkaam sq(n) {\n    farkau n * n\n}\nsq(x)\nvana(nope)\n"after error"\nthapa([1], 2)\nexit\n' | "$BIN" 2>/dev/null | tail -n +2 | sed -e 's/\(> \|\.\.\. \)//g' | tr '\n' '|')
+repl_out=$(printf 'x = 5\nx * 2\nkaam sq(n) {\n    farkau n * n\n}\nsq(x)\nvana(nope)\n"after error"\nthapa([1], 2)\nexit\n' | "$BIN" 2>/dev/null | tr -d '\r' | tail -n +2 | sed -E -e 's/(> |\.\.\. )//g' | tr '\n' '|')
 cli_check "repl session" "10|25|after error|" "$repl_out"
 
 echo ""

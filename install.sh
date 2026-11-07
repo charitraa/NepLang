@@ -1,14 +1,14 @@
 #!/bin/sh
 # NepLang installer for Linux and macOS.
 #
-#   curl -fsSL https://raw.githubusercontent.com/charitraa/Nepa/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh
 #
 # Downloads the prebuilt `neplang` binary from the latest GitHub Release.
 # Set NEPLANG_INSTALL_DIR to choose where it goes (default: ~/.local/bin).
 # Set NEPLANG_VERSION (e.g. v0.5.0) to install a specific release.
 set -eu
 
-REPO="charitraa/Nepa"
+REPO="charitraa/NepLang"
 INSTALL_DIR="${NEPLANG_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${NEPLANG_VERSION:-latest}"
 

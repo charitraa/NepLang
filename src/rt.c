@@ -6,7 +6,8 @@
 #include <string.h>
 #include <time.h>
 #ifdef _WIN32
-#include <windows.h>
+/* Declared by hand: <windows.h> defines its own TokenType, which clashes with token.h. */
+__declspec(dllimport) void __stdcall Sleep(unsigned long milliseconds);
 #endif
 #include "rt.h"
 #include "diagnostics.h"
@@ -1405,7 +1406,7 @@ static Value b_sleep(int id, Value *args, int argc, Token at) {
     if (ms > 0) {
         fflush(stdout);
 #ifdef _WIN32
-        Sleep((DWORD)ms);
+        Sleep((unsigned long)ms);
 #else
         struct timespec ts = { ms / 1000, (ms % 1000) * 1000000L };
         nanosleep(&ts, NULL);
