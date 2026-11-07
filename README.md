@@ -16,19 +16,26 @@ kaam factorial(n) {
 vana(factorial(6))    # 720
 ```
 
-NepLang is written in C (C11) and is being built one milestone at a time. Right now it
-runs programs with a tree-walking interpreter. A bytecode VM and native code generation
-are planned for later.
+NepLang is written in C (C11) with no dependencies. You run a `.np` file the same way you
+run a Python file: `neplang file.np` instead of `python file.py`. It has a REPL, a static
+checker that catches mistakes before your program runs, a bytecode VM, and it can compile
+programs to native executables.
 
 ---
 
 ## Table of contents
 
 - [Installation](#installation)
-  - [Quick install (no build needed)](#quick-install-no-build-needed)
-  - [Build from source](#build-from-source)
-- [Running a program](#running-a-program)
+  - [Arch Linux / Manjaro / CachyOS](#arch-linux--manjaro--cachyos)
+  - [Ubuntu / Debian / Fedora / other Linux](#ubuntu--debian--fedora--other-linux)
+  - [Windows](#windows)
+  - [macOS](#macos)
+  - [Prebuilt binaries](#prebuilt-binaries)
+  - [Uninstall](#uninstall)
+- [Running a program (like Python)](#running-a-program-like-python)
+- [Syntax at a glance](#syntax-at-a-glance)
 - [Language guide](#language-guide)
+- [Built-in functions and the standard library](#built-in-functions-and-the-standard-library)
 - [Error messages](#error-messages)
 - [Keyword reference](#keyword-reference)
 - [Current limitations](#current-limitations)
@@ -40,192 +47,274 @@ are planned for later.
 
 ## Installation
 
-### Quick install (no build needed)
+Building from source takes a few seconds and always gives you the newest version. All you
+need is `git`, `make` and a C compiler (`gcc` or `clang`). After installing, the `neplang`
+command works from any folder, just like `python`.
 
-Ready-made binaries for Linux, macOS and Windows are on the
-[Releases page](https://github.com/charitraa/Nepa/releases). You don't need to clone the
-repository or install a compiler. Run one command:
-
-**Linux / macOS** (in a terminal):
+### Arch Linux / Manjaro / CachyOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/charitraa/Nepa/main/install.sh | sh
+sudo pacman -S --needed base-devel git
+git clone https://github.com/charitraa/Nepa.git neplang
+cd neplang/packaging/arch
+makepkg -si
 ```
 
-This puts `neplang` in `~/.local/bin`. If that folder isn't on your `PATH`, the
-installer tells you the line to add to your `~/.bashrc` or `~/.zshrc`.
+`makepkg -si` builds NepLang, runs its tests, and installs it as a normal pacman package
+(`neplang` in `/usr/bin`, plus the man page and examples in `/usr/share/doc/neplang/examples`).
+To update later: `git pull`, then run `makepkg -si` again in `packaging/arch`.
 
-**Windows** (in PowerShell):
-
-```powershell
-irm https://raw.githubusercontent.com/charitraa/Nepa/main/install.ps1 | iex
-```
-
-This puts `neplang.exe` in `%LOCALAPPDATA%\Programs\neplang` and adds that folder to your
-`PATH`. Open a **new** terminal afterwards.
-
-Then check that it works:
+Or, without making a package:
 
 ```bash
-neplang yourfile.np
+cd neplang
+make
+sudo make install        # installs to /usr/local
 ```
 
-**Manual download:** you can also download the file for your system from the
-[latest release](https://github.com/charitraa/Nepa/releases/latest) yourself:
+### Ubuntu / Debian / Fedora / other Linux
 
-| System | File |
-|---|---|
-| Linux (Intel/AMD 64-bit) | `neplang-linux-x86_64` |
-| Linux (ARM 64-bit, e.g. Raspberry Pi 4/5) | `neplang-linux-arm64` |
-| macOS (Apple Silicon and Intel) | `neplang-macos-universal` |
-| Windows (64-bit) | `neplang-windows-x86_64.exe` |
-
-On Linux/macOS, rename it to `neplang`, make it executable (`chmod +x neplang`) and move it
-into a folder on your `PATH`. On Windows, rename it to `neplang.exe` and put it in a folder
-on your `PATH`.
-
-To update NepLang later, run the install command again.
-
-### Build from source
-
-You only need this if you want to change NepLang itself, or no prebuilt binary exists for
-your system. NepLang has no dependencies. You need a C compiler (`gcc` or `clang`) and,
-if you want, `make`.
-
-#### Linux
-
-1. Install a compiler, `make` and `git`:
+1. Install the tools:
 
    ```bash
-   # Debian / Ubuntu / Linux Mint
-   sudo apt install build-essential git
-
-   # Fedora
-   sudo dnf install gcc make git
-
-   # Arch / Manjaro / CachyOS
-   sudo pacman -S base-devel git
+   sudo apt install build-essential git        # Ubuntu / Debian / Linux Mint
+   sudo dnf install gcc make git               # Fedora
    ```
 
-2. Clone the repository and build it:
+2. Download, build and install:
 
    ```bash
    git clone https://github.com/charitraa/Nepa.git neplang
    cd neplang
    make
+   sudo make install
    ```
 
-   This creates the interpreter at `bin/neplang`.
-
-3. Check that it works:
+   `sudo make install` puts `neplang` in `/usr/local/bin` and installs the man page
+   (`man neplang`). Without sudo, install into your home folder instead:
 
    ```bash
-   ./bin/neplang examples/hello_calc.np
+   make install PREFIX=$HOME/.local
    ```
 
-4. *(Optional)* Install it so you can run `neplang` from any folder:
+   `~/.local/bin` must then be on your `PATH` (add `export PATH="$HOME/.local/bin:$PATH"`
+   to `~/.bashrc` or `~/.zshrc`).
+
+3. Check it:
 
    ```bash
-   sudo cp bin/neplang /usr/local/bin/
-   # or, without sudo:
-   mkdir -p ~/.local/bin && cp bin/neplang ~/.local/bin/
+   neplang --version
+   neplang examples/hello_calc.np
    ```
 
-   For the second option, `~/.local/bin` must be on your `PATH`.
+### Windows
 
-#### macOS
+The easiest way is **MSYS2**, which gives you `gcc` and `make` and builds a normal Windows
+`neplang.exe`.
 
-Install the Xcode command-line tools, which include `clang`, `make` and `git`, then follow
-the Linux steps from step 2 onward:
-
-```bash
-xcode-select --install
-```
-
-#### Windows
-
-You can build NepLang on Windows in either of two ways.
-
-##### Option A: MSYS2 (native Windows `.exe`, recommended)
-
-1. Download and install MSYS2 from <https://www.msys2.org>.
-2. Open the **MSYS2 UCRT64** terminal from the Start menu and install the tools:
+1. Download and install MSYS2 from <https://www.msys2.org> (keep the default folder
+   `C:\msys64`).
+2. Open **MSYS2 UCRT64** from the Start menu and run:
 
    ```bash
-   pacman -S mingw-w64-ucrt-x86_64-gcc make git
-   ```
-
-3. Clone and build:
-
-   ```bash
+   pacman -S --needed mingw-w64-ucrt-x86_64-gcc make git
    git clone https://github.com/charitraa/Nepa.git neplang
    cd neplang
    make
-   ```
-
-   This creates `bin/neplang.exe`.
-
-4. Run a program:
-
-   ```bash
    ./bin/neplang examples/hello_calc.np
    ```
 
-   To use `neplang` from PowerShell or `cmd`, add the `bin` folder to your Windows
-   `PATH`, or copy `bin\neplang.exe` into a folder that is already on it. If Windows says
-   a DLL is missing, also add `C:\msys64\ucrt64\bin` to your `PATH`.
+3. To use `neplang` from **PowerShell** or **cmd** in any folder, add two folders to your
+   `PATH`. Open PowerShell and run (change the first path if you cloned somewhere else; in
+   MSYS2 your home folder is `C:\msys64\home\<your name>`):
 
-**No `make`?** If you already have `gcc` (for example from MinGW-w64 or MSYS2), you can
-build directly from PowerShell or `cmd`:
+   ```powershell
+   $neplang = "C:\msys64\home\$env:USERNAME\neplang\bin"
+   $gcc     = "C:\msys64\ucrt64\bin"
+   [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$neplang;$gcc", "User")
+   ```
+
+   Close and reopen PowerShell, then:
+
+   ```powershell
+   neplang --version
+   neplang hello.np
+   ```
+
+   (The `ucrt64\bin` folder provides the C compiler that `neplang build` uses.)
+
+**Already have gcc but no make?** Build from PowerShell or cmd in the `neplang` folder:
 
 ```powershell
 mkdir bin
-gcc -std=c11 -Wall -Wextra -Wpedantic -O2 -o bin\neplang.exe src\lexer.c src\value.c src\ast.c src\parser.c src\interpreter.c src\diagnostics.c src\main.c
+gcc -std=c11 -O2 -o bin\neplang.exe src\lexer.c src\value.c src\ast.c src\parser.c src\modules.c src\classes.c src\checker.c src\interpreter.c src\rt.c src\ir.c src\vm.c src\cgen.c src\diagnostics.c src\main.c -lm
 bin\neplang.exe examples\hello_calc.np
 ```
 
-##### Option B: WSL (Linux on Windows)
+**WSL** (Linux inside Windows) also works: run `wsl --install` in an Administrator
+PowerShell, restart, open **Ubuntu**, and follow the [Linux steps](#ubuntu--debian--fedora--other-linux).
 
-1. Open PowerShell as Administrator and run:
+### macOS
 
-   ```powershell
-   wsl --install
-   ```
+```bash
+xcode-select --install          # installs clang, make and git
+git clone https://github.com/charitraa/Nepa.git neplang
+cd neplang
+make
+sudo make install
+```
 
-2. Restart, open the **Ubuntu** app, and follow the [Linux](#linux) build steps.
+### Prebuilt binaries
 
-> **Note for Windows:** `make debug` uses AddressSanitizer, which MinGW does not
-> support. Use WSL if you want sanitizer builds. `make test` needs `bash`, which the
-> MSYS2 terminal and WSL both provide.
+Ready-made binaries are on the [Releases page](https://github.com/charitraa/Nepa/releases).
+They can be older than the code in the repository, so build from source to get the newest
+features.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/charitraa/Nepa/main/install.sh | sh     # Linux / macOS
+```
+
+```powershell
+irm https://raw.githubusercontent.com/charitraa/Nepa/main/install.ps1 | iex          # Windows PowerShell
+```
+
+### Uninstall
+
+```bash
+sudo pacman -R neplang          # Arch, if installed with makepkg
+sudo make uninstall             # if installed with 'sudo make install' (run in the neplang folder)
+make uninstall PREFIX=$HOME/.local
+```
+
+On Windows, delete the `neplang` folder and remove it from your `PATH`.
 
 ---
 
-## Running a program
+## Running a program (like Python)
 
-NepLang source files use the `.np` extension. Write a program in any text editor, for
-example `namaste.np`:
+NepLang works like Python: write code in a file, then run the file.
+
+| Python | NepLang | Does |
+|---|---|---|
+| `python hello.py` | `neplang hello.np` | run a program |
+| `python` | `neplang` | interactive mode (REPL) |
+| `python hello.py a b` | `neplang hello.np a b` | pass arguments (read them with `os.args()`) |
+| | `neplang check hello.np` | only look for mistakes, don't run |
+| | `neplang build hello.np -o hello` | make a native program you can run as `./hello` |
+| `python --version` | `neplang --version` | show the version |
+
+NepLang files end in `.np`. Make a file `namaste.np` in any text editor:
 
 ```
 # my first NepLang program
-umar = 20
-vana(umar + 5)
+naam = padha()              # read a line you type
+vana("Namaste " + naam)
 ```
 
-Then run it:
+Run it:
 
 ```bash
-neplang namaste.np            # after the quick install (any OS)
-./bin/neplang namaste.np      # if you built from source (Linux / macOS / MSYS2 / WSL)
-bin\neplang.exe namaste.np    # if you built from source (Windows PowerShell or cmd)
+neplang namaste.np
+```
+
+```
+Sita
+Namaste Sita
+```
+
+Or try code line by line in the REPL (type `exit` to leave):
+
+```
+$ neplang
+> x = 10
+> x * 2
+20
+> vana("Namaste")
+Namaste
+```
+
+Run the examples from the `neplang` folder, e.g. `neplang examples/types.np`.
+
+---
+
+## Syntax at a glance
+
+NepLang next to Python:
+
+| What | Python | NepLang |
+|---|---|---|
+| print | `print(x)` | `vana(x)` |
+| variable | `x = 5` | `x = 5` or, with a type, `int x = 5` |
+| constant | | `const PI = 3.14` |
+| if / elif / else | `if a > b:` / `elif` / `else:` | `yedi a > b { } natara yedi { } natara { }` |
+| while | `while i < 10:` | `jabasamma i < 10 { }` |
+| for over a range | `for i in range(0, 10):` | `ko_lagi i in 0..10 { }` |
+| for over a list | `for x in items:` | `ko_lagi x in items { }` |
+| break / continue | `break` / `continue` | `ruk` / `agadi` |
+| function | `def add(a, b): return a + b` | `kaam add(a, b) { farkau a + b }` |
+| True / False / None | `True` `False` `None` | `sacho` `jutho` `khali` |
+| and / or / not | `and` `or` `not` | `ra` `wa` `hoina` |
+| list | `[1, 2, 3]`, `len(a)`, `a.append(4)` | `[1, 2, 3]`, `lambai(a)`, `a.push(4)` |
+| input | `input()` | `padha()` |
+| f-string | `f"Hi {naam}"` | `"Hi ${naam}"` |
+| class | `class Dog(Animal):` | `class Kukur(Janawar) { }` |
+| self / constructor | `self`, `__init__` | `yo`, `banau` |
+| import | `import math` | `import math` |
+| comment | `# ...` | `# ...` |
+
+Blocks use `{ }` instead of indentation, and each statement goes on its own line.
+
+A complete program:
+
+```
+import math
+
+kaam factorial(int n) int {
+    yedi n <= 1 {
+        farkau 1
+    }
+    farkau n * factorial(n - 1)
+}
+
+ko_lagi i in 1..6 {
+    vana("${i}! = ${factorial(i)}")
+}
+
+ank = [72, 45, 91]
+vana("ausat: " + math.round(float(ank.sum()) / ank.length(), 1))
+
+class Manchhe {
+    string naam
+    int umar
+
+    kaam banau(string naam, int umar) {
+        yo.naam = naam
+        yo.umar = umar
+    }
+
+    kaam bolau() {
+        vana("Namaste, ma ${naam} hu, ${umar} barsa.")
+    }
+}
+
+Manchhe("Sita", 22).bolau()
 ```
 
 Output:
 
 ```
-25
+1! = 1
+2! = 2
+3! = 6
+4! = 24
+5! = 120
+ausat: 69.3
+Namaste, ma Sita hu, 22 barsa.
 ```
 
-The included examples:
+### Example programs
+
+Run any of these from the `neplang` folder, e.g. `neplang examples/types.np`:
 
 | File | Shows |
 |---|---|
@@ -238,9 +327,7 @@ The included examples:
 | `examples/classes.np` | Classes: fields, methods, `banau`, private `_` members |
 | `examples/types.np` | Types, `const`, floats, bools, `khali`, inheritance, interfaces, the standard library |
 
-The example files are in the repository's
-[`examples/`](https://github.com/charitraa/Nepa/tree/main/examples) folder. Download one,
-or copy its code into your own `.np` file.
+After `makepkg -si` on Arch they are also in `/usr/share/doc/neplang/examples/`.
 
 ---
 

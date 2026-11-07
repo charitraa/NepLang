@@ -328,8 +328,14 @@ int cgen_build(const IrProgram *program, const char *output_path, int keep_c) {
     size_t size = 400 + strlen(dir) * 4 + n * 2;
     char *command = malloc(size);
     if (!command) return 1;
+#ifdef _WIN32
+    /* cmd.exe only understands double quotes; MinGW provides gcc rather than cc */
+    snprintf(command, size, "%s -std=c11 -O2 -w -I\"%s\" -o \"%s\" \"%s\" \"%s/value.c\" \"%s/rt.c\" \"%s/diagnostics.c\" -lm",
+             cc && *cc ? cc : "gcc", dir, output_path, c_path, dir, dir, dir);
+#else
     snprintf(command, size, "%s -std=c11 -O2 -w -I'%s' -o '%s' '%s' '%s/value.c' '%s/rt.c' '%s/diagnostics.c' -lm",
              cc && *cc ? cc : "cc", dir, output_path, c_path, dir, dir, dir);
+#endif
     int status = system(command);
     if (status != 0) {
         fprintf(stderr, "neplang: the C compiler failed (command: %s)\n", command);

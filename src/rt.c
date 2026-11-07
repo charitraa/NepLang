@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/types.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -704,14 +703,27 @@ static Value b_sankhya(int id, Value *args, int argc, Token at) {
     return number;
 }
 
+/* One line from stdin without its line ending (empty at end of input). Plain C, so it also
+ * works on Windows, which has no POSIX getline(). */
 static Value read_line(void) {
     fflush(stdout);
-    char *line = NULL;
-    size_t cap = 0;
-    ssize_t got = getline(&line, &cap, stdin);
-    if (got < 0) got = 0;
-    while (got > 0 && (line[got - 1] == '\n' || line[got - 1] == '\r')) got--;
-    Value result = value_new_string(line ? line : "", (int)got);
+    size_t cap = 128, got = 0;
+    char *line = rt_alloc(cap);
+    int c;
+    while ((c = getchar()) != EOF && c != '\n') {
+        if (got + 1 >= cap) {
+            cap *= 2;
+            char *grown = realloc(line, cap);
+            if (!grown) {
+                fprintf(stderr, "neplang: out of memory\n");
+                exit(1);
+            }
+            line = grown;
+        }
+        line[got++] = (char)c;
+    }
+    while (got > 0 && line[got - 1] == '\r') got--;
+    Value result = value_new_string(line, (int)got);
     free(line);
     return result;
 }
