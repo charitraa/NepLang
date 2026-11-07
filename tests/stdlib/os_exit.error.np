@@ -1,0 +1,4 @@
+import os
+vana("before")
+os.exit(3)
+vana("after")

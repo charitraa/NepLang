@@ -63,7 +63,27 @@ static Token number_token(Lexer *lexer) {
         advance(lexer);
     }
 
+    /* "3.14" is a decimal number, but "0..10" is a range: a '.' only starts a fraction when a
+     * digit follows it. An exponent ("1e9", "2.5e-3") also makes a decimal number. */
+    int is_float = 0;
+    if (peek(lexer) == '.' && isdigit((unsigned char)lexer->current[1]) &&
+        !(lexer->end && lexer->current + 1 >= lexer->end)) {
+        is_float = 1;
+        advance(lexer);
+        while (isdigit((unsigned char)peek(lexer))) advance(lexer);
+    }
+    if (peek(lexer) == 'e' || peek(lexer) == 'E') {
+        const char *p = lexer->current + 1;
+        if (*p == '+' || *p == '-') p++;
+        if (isdigit((unsigned char)*p) && !(lexer->end && p >= lexer->end)) {
+            is_float = 1;
+            while (lexer->current < p) advance(lexer);
+            while (isdigit((unsigned char)peek(lexer))) advance(lexer);
+        }
+    }
+
     int length = (int)(lexer->current - start);
+    if (is_float) return make_token(TOKEN_FLOAT, start, length, line, col);
     Token token = make_token(TOKEN_INT, start, length, line, col);
 
     long value = 0;
@@ -164,6 +184,10 @@ static const struct {
     { "ruk",       TOKEN_RUK },
     { "agadi",     TOKEN_AGADI },
     { "import",    TOKEN_IMPORT },
+    { "interface", TOKEN_INTERFACE },
+    { "super",     TOKEN_SUPER },
+    { "const",     TOKEN_CONST },
+    { "khali",     TOKEN_KHALI },
 };
 
 static TokenType keyword_type(const char *start, int length) {
@@ -185,14 +209,14 @@ static Token ident_token(Lexer *lexer) {
     }
 
     int length = (int)(lexer->current - start);
-    /* sacho / jutho (true / false) are literals for 1 and 0: there is no separate bool type yet. */
+    /* sacho / jutho are the two bool literals (true / false). */
     if (length == 5 && strncmp(start, "sacho", 5) == 0) {
-        Token token = make_token(TOKEN_INT, start, length, line, col);
+        Token token = make_token(TOKEN_BOOL, start, length, line, col);
         token.value = 1;
         return token;
     }
     if (length == 5 && strncmp(start, "jutho", 5) == 0) {
-        return make_token(TOKEN_INT, start, length, line, col);
+        return make_token(TOKEN_BOOL, start, length, line, col);
     }
     return make_token(keyword_type(start, length), start, length, line, col);
 }
@@ -235,11 +259,22 @@ Token lexer_next_token(Lexer *lexer) {
 
     advance(lexer);
     switch (c) {
-        case '+': return make_token(TOKEN_PLUS, start, 1, line, col);
-        case '-': return make_token(TOKEN_MINUS, start, 1, line, col);
-        case '*': return make_token(TOKEN_STAR, start, 1, line, col);
-        case '/': return make_token(TOKEN_SLASH, start, 1, line, col);
-        case '%': return make_token(TOKEN_PERCENT, start, 1, line, col);
+        case '+':
+            if (match(lexer, '=')) return make_token(TOKEN_PLUS_EQUAL, start, 2, line, col);
+            return make_token(TOKEN_PLUS, start, 1, line, col);
+        case '-':
+            if (match(lexer, '=')) return make_token(TOKEN_MINUS_EQUAL, start, 2, line, col);
+            return make_token(TOKEN_MINUS, start, 1, line, col);
+        case '*':
+            if (match(lexer, '=')) return make_token(TOKEN_STAR_EQUAL, start, 2, line, col);
+            return make_token(TOKEN_STAR, start, 1, line, col);
+        case '/':
+            if (match(lexer, '=')) return make_token(TOKEN_SLASH_EQUAL, start, 2, line, col);
+            return make_token(TOKEN_SLASH, start, 1, line, col);
+        case '%':
+            if (match(lexer, '=')) return make_token(TOKEN_PERCENT_EQUAL, start, 2, line, col);
+            return make_token(TOKEN_PERCENT, start, 1, line, col);
+        case '?': return make_token(TOKEN_QUESTION, start, 1, line, col);
         case '(': return make_token(TOKEN_LPAREN, start, 1, line, col);
         case ')': return make_token(TOKEN_RPAREN, start, 1, line, col);
         case '.':

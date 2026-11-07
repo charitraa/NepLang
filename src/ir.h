@@ -17,6 +17,9 @@
 
 typedef enum {
     IR_CONST_INT,     /* push a */
+    IR_CONST_FLOAT,   /* push f */
+    IR_CONST_BOOL,    /* push sacho (a = 1) or jutho (a = 0) */
+    IR_CONST_NULL,    /* push khali */
     IR_CONST_STR,     /* push string a of the program's string pool */
     IR_POP,
     IR_LOAD_LOCAL,    /* push local slot a (hidden slots, parameters) */
@@ -28,9 +31,9 @@ typedef enum {
     IR_NEG,
     IR_POS,
     IR_NOT,           /* hoina */
-    IR_TRUTH,         /* number -> 0/1 */
+    IR_TRUTH,         /* condition value -> sacho/jutho */
     IR_JUMP,          /* a = label */
-    IR_JUMP_IF_FALSE, /* pop a number; jump to label a when it is 0 */
+    IR_JUMP_IF_FALSE, /* pop a condition; jump to label a when it is false */
     IR_LABEL,         /* a = label id */
     IR_NEW_ARRAY,     /* pop a items, push an array */
     IR_INDEX,
@@ -39,7 +42,7 @@ typedef enum {
     IR_CHECK_ITER,    /* error unless the top of stack is an array or string */
     IR_CHECK_NUM,     /* error unless the top of stack is a number; a = IR_WHAT_* */
     IR_CALL,          /* a = function index, b = argument count */
-    IR_BUILTIN,       /* a = builtin id (rt.h), b = argument count */
+    IR_BUILTIN,       /* a = builtin id (rt.h), b = argument count; also standard-library module functions */
     IR_RETURN,        /* pop the return value */
     IR_PRINT,
     IR_NEW_OBJECT,    /* push a new object of class a, every field 0 */
@@ -47,7 +50,10 @@ typedef enum {
     IR_DUP,           /* push another reference to the top of the stack */
     IR_GET_FIELD,     /* pop object, push its field named by the token; a = class of the running method or -1 */
     IR_SET_FIELD,     /* pop value, then object; assign the field named by the token; a = as for GET_FIELD */
-    IR_CALL_METHOD    /* stack: object, b args. Method named by the token; a = as for GET_FIELD */
+    IR_CALL_METHOD,   /* stack: object, b args. Method named by the token; a = as for GET_FIELD.
+                       * On an array or string it calls that value's built-in method ('a.push(1)'). */
+    IR_COERCE         /* check the top of stack against type a of the program's type table (int -> float
+                       * converts); b = RT_CTX_*; the token is the variable/parameter/function name */
 } IrOp;
 
 enum { IR_WHAT_CONDITION, IR_WHAT_INDEX, IR_WHAT_RANGE_START, IR_WHAT_RANGE_END };
@@ -57,6 +63,7 @@ typedef struct {
     IrOp op;
     long a;
     long b;
+    double f;      /* IR_CONST_FLOAT */
     Token token;   /* source location for runtime errors (and the variable name for LOAD_NAME) */
     int depth;     /* operand-stack depth just before this instruction runs */
 } IrInstr;
@@ -74,8 +81,8 @@ typedef struct {
 } IrFunction;
 
 typedef struct {
-    const AstNode *decl;   /* the AST_CLASS node (outlives the program) */
-    int *method_fn;        /* method position in decl -> function index */
+    const AstNode *decl;   /* the AST_CLASS or AST_INTERFACE node (outlives the program) */
+    int *method_fn;        /* method position in decl -> function index (-1 for an interface's methods) */
 } IrClass;
 
 typedef struct {
@@ -88,6 +95,8 @@ typedef struct {
     int global_count;
     IrClass *classes;
     int class_count;
+    const TypeRef **types;   /* written types used by IR_COERCE (they point into the AST) */
+    int type_count;
 } IrProgram;
 
 /* Returns NULL (after reporting an error) when the program uses something the compiled

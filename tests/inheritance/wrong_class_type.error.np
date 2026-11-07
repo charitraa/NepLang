@@ -1,0 +1,7 @@
+class A {
+    x = 1
+}
+class B {
+    y = 1
+}
+A a = B()

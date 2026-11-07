@@ -1,1 +1,1 @@
-vana("ab" * 2)
+vana("ab" * "c")

@@ -1,0 +1,5 @@
+class P {
+    x = 1
+}
+P? p = khali
+vana(p.x)

@@ -90,6 +90,9 @@ void vm_run(const IrProgram *program) {
 
         switch (in->op) {
             case IR_CONST_INT: push(vm, value_int(in->a)); break;
+            case IR_CONST_FLOAT: push(vm, value_float(in->f)); break;
+            case IR_CONST_BOOL: push(vm, value_bool((int)in->a)); break;
+            case IR_CONST_NULL: push(vm, value_null()); break;
             case IR_CONST_STR:
                 push(vm, value_new_string(program->strings[in->a], program->string_lengths[in->a]));
                 break;
@@ -164,7 +167,7 @@ void vm_run(const IrProgram *program) {
             case IR_BUILTIN: {
                 int argc = (int)in->b;
                 vm->sp -= argc;
-                Value result = rt_builtin((int)in->a, &vm->stack[vm->sp], in->token);
+                Value result = rt_builtin((int)in->a, &vm->stack[vm->sp], argc, in->token);
                 push(vm, result);
                 break;
             }
@@ -184,11 +187,13 @@ void vm_run(const IrProgram *program) {
             case IR_NEW_OBJECT: push(vm, value_new_object(program->classes[in->a].decl)); break;
             case IR_INIT_FIELD: {
                 Value v = pop(vm);
-                Object *object = vm->stack[vm->sp - 1].as.object;
-                value_release(object->fields[in->a]);
-                object->fields[in->a] = v;
+                rt_init_field(vm->stack[vm->sp - 1], (int)in->a, v, in->token);
                 break;
             }
+            case IR_COERCE:
+                vm->stack[vm->sp - 1] = rt_coerce(vm->stack[vm->sp - 1], program->types[in->a], (int)in->b, in->token,
+                                                  in->token);
+                break;
             case IR_DUP: push(vm, value_retain(vm->stack[vm->sp - 1])); break;
             case IR_GET_FIELD: {
                 Value object = pop(vm);
@@ -205,6 +210,14 @@ void vm_run(const IrProgram *program) {
             }
             case IR_CALL_METHOD: {
                 int argc = (int)in->b;
+                if (vm->stack[vm->sp - argc - 1].type != VAL_OBJECT) {
+                    /* a method of an array or string, e.g. 'a.push(1)' */
+                    vm->sp -= argc + 1;
+                    Value result = rt_value_method(&vm->stack[vm->sp], argc + 1, in->token.start, in->token.length,
+                                                   in->token);
+                    push(vm, result);
+                    break;
+                }
                 const AstNode *klass;
                 int method = rt_find_method(vm->stack[vm->sp - argc - 1], in->token.start, in->token.length, argc,
                                             caller_class(program, in->a), in->token, &klass);

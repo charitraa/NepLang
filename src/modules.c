@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "diagnostics.h"
+#include "rt.h"
 
 #define MAX_IMPORT_DEPTH 32
 
@@ -16,6 +17,122 @@ typedef struct {
 static LoadedModule *loaded;
 static int loaded_count;
 static int loaded_capacity;
+
+/* Standard-library modules named by 'import math' (built into the runtime, no .np file). */
+static char **std_imports;
+static int std_count;
+
+static int std_imported(const char *name, int length) {
+    for (int i = 0; i < std_count; i++) {
+        if ((int)strlen(std_imports[i]) == length && strncmp(std_imports[i], name, (size_t)length) == 0) return 1;
+    }
+    return 0;
+}
+
+static void add_std_import(const char *name) {
+    if (std_imported(name, (int)strlen(name))) return;
+    char **grown = realloc(std_imports, sizeof(char *) * (size_t)(std_count + 1));
+    if (!grown) {
+        fprintf(stderr, "neplang: out of memory\n");
+        exit(1);
+    }
+    std_imports = grown;
+    size_t n = strlen(name);
+    std_imports[std_count] = malloc(n + 1);
+    if (!std_imports[std_count]) {
+        fprintf(stderr, "neplang: out of memory\n");
+        exit(1);
+    }
+    memcpy(std_imports[std_count++], name, n + 1);
+}
+
+/* Is this expression a standard-library module name, like the 'math' in 'math.sqrt(x)'? */
+static int is_module_ref(const AstNode *node) {
+    return node && node->type == AST_VARIABLE &&
+           std_imported(node->as.variable.name.start, node->as.variable.name.length);
+}
+
+/* Turns 'math.sqrt(x)' into a module call (call.module = "math", no receiver) and the constant
+ * 'math.PI' into the call 'math.PI()', everywhere in the tree. */
+static void rewrite_module_uses(AstNode *node) {
+    if (!node) return;
+    switch (node->type) {
+        case AST_CALL:
+            if (is_module_ref(node->as.call.receiver)) {
+                node->as.call.module = node->as.call.receiver->as.variable.name;
+                ast_free(node->as.call.receiver);
+                node->as.call.receiver = NULL;
+            }
+            rewrite_module_uses(node->as.call.receiver);
+            for (int i = 0; i < node->as.call.arg_count; i++) rewrite_module_uses(node->as.call.args[i]);
+            break;
+        case AST_FIELD:
+            if (is_module_ref(node->as.field.object)) {
+                Token module = node->as.field.object->as.variable.name;
+                Token name = node->as.field.name;
+                ast_free(node->as.field.object);
+                memset(&node->as, 0, sizeof(node->as));
+                node->type = AST_CALL;
+                node->token = name;
+                node->as.call.name = name;
+                node->as.call.module = module;
+                break;
+            }
+            rewrite_module_uses(node->as.field.object);
+            break;
+        case AST_BINOP:
+            rewrite_module_uses(node->as.binop.left);
+            rewrite_module_uses(node->as.binop.right);
+            break;
+        case AST_UNARY: rewrite_module_uses(node->as.unary.operand); break;
+        case AST_ASSIGN: rewrite_module_uses(node->as.assign.value); break;
+        case AST_PRINT: rewrite_module_uses(node->as.print.expr); break;
+        case AST_IF:
+            rewrite_module_uses(node->as.if_stmt.condition);
+            rewrite_module_uses(node->as.if_stmt.then_block);
+            rewrite_module_uses(node->as.if_stmt.else_branch);
+            break;
+        case AST_WHILE:
+            rewrite_module_uses(node->as.while_stmt.condition);
+            rewrite_module_uses(node->as.while_stmt.body);
+            break;
+        case AST_FOR:
+            rewrite_module_uses(node->as.for_stmt.start);
+            rewrite_module_uses(node->as.for_stmt.end);
+            rewrite_module_uses(node->as.for_stmt.body);
+            break;
+        case AST_FOR_EACH:
+            rewrite_module_uses(node->as.for_each.iterable);
+            rewrite_module_uses(node->as.for_each.body);
+            break;
+        case AST_ARRAY:
+            for (int i = 0; i < node->as.array.count; i++) rewrite_module_uses(node->as.array.items[i]);
+            break;
+        case AST_INDEX:
+            rewrite_module_uses(node->as.index.target);
+            rewrite_module_uses(node->as.index.index);
+            break;
+        case AST_INDEX_ASSIGN:
+            rewrite_module_uses(node->as.index_assign.target);
+            rewrite_module_uses(node->as.index_assign.value);
+            break;
+        case AST_FIELD_ASSIGN:
+            rewrite_module_uses(node->as.field_assign.target);
+            rewrite_module_uses(node->as.field_assign.value);
+            break;
+        case AST_FUNCTION: rewrite_module_uses(node->as.function.body); break;
+        case AST_RETURN: rewrite_module_uses(node->as.return_stmt.value); break;
+        case AST_CLASS:
+            /* before inheritance is resolved, every field and method here is the class's own */
+            for (int i = 0; i < node->as.class_decl.field_count; i++) rewrite_module_uses(node->as.class_decl.fields[i].value);
+            for (int i = 0; i < node->as.class_decl.method_count; i++) rewrite_module_uses(node->as.class_decl.methods[i]);
+            break;
+        case AST_BLOCK:
+            for (int i = 0; i < node->as.block.count; i++) rewrite_module_uses(node->as.block.statements[i]);
+            break;
+        default: break;
+    }
+}
 
 static char *copy_string(const char *s) {
     size_t n = strlen(s);
@@ -170,11 +287,21 @@ static int resolve_into(AstNode *program, const char *file, int depth) {
             goto fail;
         }
 
+        if (stmt->as.import_stmt.is_name && rt_is_module(name, (int)strlen(name))) {
+            /* 'import math': a module of the standard library, built into the runtime. (A file of
+             * the same name can still be imported with quotes: import "math.np".) */
+            add_std_import(name);
+            free(filename);
+            ast_free(stmt);
+            continue;
+        }
+
         char *source = NULL;
         char *path = locate(file, filename, &source);
         if (!path) {
             snprintf(message, sizeof(message),
-                     "Could not find module '%s'. It is looked up next to this file, then in NEPLANG_PATH.",
+                     "Could not find module '%s'. It is looked up next to this file, then in NEPLANG_PATH. "
+                     "The built-in modules are math, string, array, io, time and os.",
                      filename);
             report_error("", file, stmt->token, message);
             free(filename);
@@ -224,9 +351,12 @@ int modules_resolve(AstNode *program, const char *main_path) {
     for (int i = 0; i < program->as.block.count; i++) {
         if (program->as.block.statements[i]->type == AST_IMPORT) has_import = 1;
     }
-    if (!has_import) return 0;
-    remember(copy_string(main_path), NULL);
-    return resolve_into(program, main_path, 0);
+    if (has_import) {
+        remember(copy_string(main_path), NULL);
+        if (resolve_into(program, main_path, 0) != 0) return 1;
+    }
+    if (std_count > 0) rewrite_module_uses(program);
+    return 0;
 }
 
 void modules_free(void) {
@@ -237,4 +367,8 @@ void modules_free(void) {
     free(loaded);
     loaded = NULL;
     loaded_count = loaded_capacity = 0;
+    for (int i = 0; i < std_count; i++) free(std_imports[i]);
+    free(std_imports);
+    std_imports = NULL;
+    std_count = 0;
 }

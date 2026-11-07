@@ -1,0 +1,8 @@
+class A {
+    kaam f(x) {
+    }
+}
+class B(A) {
+    kaam f() {
+    }
+}

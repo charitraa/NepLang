@@ -5,6 +5,6 @@ vana(3 <= 3)
 vana(4 > 5)
 vana(5 >= 6)
 vana(1 + 2 * 3 == 7)
-vana((2 < 3) + (5 > 1))
+vana(int(2 < 3) + int(5 > 1))
 thulo = 10 > 3
 vana(thulo)

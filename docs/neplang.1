@@ -1,10 +1,23 @@
-.TH NEPLANG 1 "October 2026" "NepLang" "User Commands"
+.TH NEPLANG 1 "November 2026" "NepLang" "User Commands"
 .SH NAME
 neplang \- run a NepLang program
 .SH SYNOPSIS
 .B neplang
 [\fB\-\-vm\fR | \fB\-\-ir\fR | \fB\-\-emit\-c\fR | \fB\-\-build\fR \fB\-o\fR \fIout\fR]
 .I file.np
+[\fIargs\fR...]
+.br
+.B neplang
+.BR run | check
+.I file.np
+.br
+.B neplang build
+.I file.np
+.B \-o
+.I out
+.br
+.B neplang
+(starts the REPL)
 .SH DESCRIPTION
 .B neplang
 runs a program written in NepLang, a small programming language whose keywords are
@@ -22,6 +35,22 @@ Print a value.
 .TP
 .B name = expr
 Create or update a variable.
+.B "x += 1"
+(and
+.BR "-= *= /= %=" )
+is short for
+.BR "x = x + 1" .
+.TP
+.B int x = 1   string? s   const MAX = 10
+Declare a variable with a type
+.RB ( int ", " float ", " bool ", " string ", " array ", " object ", " any
+or a class or interface name);
+.B ?
+also allows
+.BR khali .
+A typed variable only accepts values of its type.
+.B const
+makes a constant.
 .TP
 .B yedi cond { } natara yedi cond { } natara { }
 If / else-if / else.
@@ -40,10 +69,14 @@ from
 up to, but not including,
 .IR b .
 .TP
-.B kaam name(a, b) { farkau expr }
+.B kaam name(int a, b) int { farkau expr }
 Define a function;
 .B farkau
-returns a value.
+returns a value (without one, the result is
+.BR khali ).
+Parameter and return types are optional;
+.B void
+means the function gives nothing back.
 .TP
 .B ko_lagi x in arr { }
 Loop over the items of an array, or the characters of a string.
@@ -78,19 +111,43 @@ Inside a method, bare field names refer to the current object, and
 .B yo
 is the object itself. Fields and methods whose names start with
 .B _
-are private to the class.
+are private to the class (and its parents and children).
+.TP
+.B class Kukur(Janawar, Bolne) { }   interface Bolne { kaam bolau() }
+Inheritance: one parent class and any number of interfaces.
+.B super.method(...)
+calls the parent's method and
+.B super(...)
+in
+.B banau
+runs the parent's constructor. A class must define every method of its interfaces.
+.TP
+.B a.push(x)  s.upper()
+Arrays and strings have methods (push pop insert remove clear contains index_of reverse
+sort slice join copy sum min max length; upper lower trim split contains find replace
+starts_with ends_with slice repeat chars code reverse length).
 .PP
-Values are integers, arrays, strings and objects. Comparisons
+Values are whole numbers, decimal numbers (\fB3.14\fR), bools (\fBsacho\fR, \fBjutho\fR),
+strings, arrays, objects and \fBkhali\fR (nothing). Comparisons
 .B "== != < <= > >="
-work on two numbers or two strings and give 1 or 0. A condition must be a number;
-any non-zero value is true.
+give sacho or jutho;
+.BR ra ,
+.B wa
+and
+.B hoina
+are and, or and not. A condition must be a bool or a number (non-zero is true).
+.PP
+Built-in functions: lambai, thapa, hata, padha, sankhya, int, float, string, bool, prakar.
 .SH MODES
 With no option the program runs on the tree-walking interpreter. \fB\-\-vm\fR compiles it to bytecode and runs it on the virtual machine.
 \fB\-\-ir\fR prints the optimized intermediate representation. \fB\-\-emit\-c\fR prints the generated C source.
 \fB\-\-build\fR \fB\-o\fR \fIout\fR produces a native executable using the system C compiler (\fBCC\fR or \fBcc\fR).
-Classes are supported by the interpreter only.
+\fBcheck\fR only reports errors. Every mode supports the whole language and prints the same output.
+Arguments after the file are given to the program (\fBos.args()\fR).
+With no file, \fBneplang\fR starts an interactive REPL: expressions are printed, and errors don't end the session.
 .SH MODULES
 \fBimport "file.np"\fR or \fBimport name\fR includes another file. Files are searched next to the importing file, then in the directories listed in \fBNEPLANG_PATH\fR.
+\fBimport math\fR (and \fBstring\fR, \fBarray\fR, \fBio\fR, \fBtime\fR, \fBos\fR) enables a built-in standard-library module, used as \fBmath.sqrt(2)\fR.
 .SH EXAMPLE
 .nf
 kaam factorial(n) {
@@ -102,7 +159,7 @@ kaam factorial(n) {
 vana(factorial(6))
 .fi
 .SH EXIT STATUS
-0 on success; 1 on a syntax or runtime error, which is printed with its file, line and
-column.
+0 on success; 1 on a syntax, type or runtime error, which is printed with its file, line and
+column (or the code given to \fBos.exit\fR).
 .SH SEE ALSO
 https://github.com/charitraa/Nepa

@@ -48,6 +48,83 @@ AstNode *ast_new_string(Token literal, char *chars, int length) {
     return node;
 }
 
+AstNode *ast_new_float(Token literal, double value) {
+    AstNode *node = ast_alloc(AST_FLOAT, literal);
+    node->as.floating.value = value;
+    return node;
+}
+
+AstNode *ast_new_bool(Token literal, int value) {
+    AstNode *node = ast_alloc(AST_BOOL, literal);
+    node->as.boolean.value = value != 0;
+    return node;
+}
+
+AstNode *ast_new_null(Token literal) {
+    return ast_alloc(AST_NULL, literal);
+}
+
+AstNode *ast_default_for(TypeRef type, Token at) {
+    if (type.nullable) return ast_new_null(at);
+    switch (type.kind) {
+        case TYPE_INT: { AstNode *n = ast_alloc(AST_NUMBER, at); n->as.number.value = 0; return n; }
+        case TYPE_FLOAT: return ast_new_float(at, 0.0);
+        case TYPE_BOOL: return ast_new_bool(at, 0);
+        case TYPE_STRING: {
+            char *empty = malloc(1);
+            if (!empty) {
+                fprintf(stderr, "neplang: out of memory\n");
+                exit(1);
+            }
+            empty[0] = '\0';
+            return ast_new_string(at, empty, 0);
+        }
+        case TYPE_ARRAY: return ast_new_array(at);
+        default: return ast_new_null(at);
+    }
+}
+
+AstNode *ast_clone(const AstNode *expr) {
+    if (!expr) return NULL;
+    AstNode *node = ast_alloc(expr->type, expr->token);
+    node->as = expr->as;
+    switch (expr->type) {
+        case AST_STRING: {
+            char *chars = malloc((size_t)expr->as.string.length + 1);
+            if (!chars) {
+                fprintf(stderr, "neplang: out of memory\n");
+                exit(1);
+            }
+            memcpy(chars, expr->as.string.chars, (size_t)expr->as.string.length + 1);
+            node->as.string.chars = chars;
+            break;
+        }
+        case AST_BINOP:
+            node->as.binop.left = ast_clone(expr->as.binop.left);
+            node->as.binop.right = ast_clone(expr->as.binop.right);
+            break;
+        case AST_UNARY: node->as.unary.operand = ast_clone(expr->as.unary.operand); break;
+        case AST_INDEX:
+            node->as.index.target = ast_clone(expr->as.index.target);
+            node->as.index.index = ast_clone(expr->as.index.index);
+            break;
+        case AST_FIELD: node->as.field.object = ast_clone(expr->as.field.object); break;
+        case AST_ARRAY:
+            node->as.array.items = NULL;
+            node->as.array.count = node->as.array.capacity = 0;
+            for (int i = 0; i < expr->as.array.count; i++) ast_array_add_item(node, ast_clone(expr->as.array.items[i]));
+            break;
+        case AST_CALL:
+            node->as.call.receiver = ast_clone(expr->as.call.receiver);
+            node->as.call.args = NULL;
+            node->as.call.arg_count = node->as.call.arg_capacity = 0;
+            for (int i = 0; i < expr->as.call.arg_count; i++) ast_call_add_arg(node, ast_clone(expr->as.call.args[i]));
+            break;
+        default: break;   /* leaves: numbers, variables, yo, ... */
+    }
+    return node;
+}
+
 /* Stand-in node returned by the parser after a syntax error; never executed. */
 AstNode *ast_new_placeholder(void) {
     return ast_alloc(AST_NUMBER, no_token());
@@ -153,9 +230,13 @@ AstNode *ast_new_function(Token name) {
     return node;
 }
 
-void ast_function_add_param(AstNode *function, Token param) {
+void ast_function_add_param(AstNode *function, Token param, TypeRef type) {
+    int capacity = function->as.function.param_capacity;
     function->as.function.params = grow_array(function->as.function.params, function->as.function.param_count,
                                               &function->as.function.param_capacity, sizeof(Token));
+    function->as.function.param_types = grow_array(function->as.function.param_types,
+                                                   function->as.function.param_count, &capacity, sizeof(TypeRef));
+    function->as.function.param_types[function->as.function.param_count] = type;
     function->as.function.params[function->as.function.param_count++] = param;
 }
 
@@ -199,12 +280,25 @@ AstNode *ast_new_class(Token name) {
     return node;
 }
 
-void ast_class_add_field(AstNode *class_decl, Token name, AstNode *value) {
+void ast_class_add_base(AstNode *class_decl, Token base) {
+    class_decl->as.class_decl.bases = grow_array(class_decl->as.class_decl.bases, class_decl->as.class_decl.base_count,
+                                                 &class_decl->as.class_decl.base_capacity, sizeof(Token));
+    class_decl->as.class_decl.bases[class_decl->as.class_decl.base_count++] = base;
+}
+
+AstNode *ast_new_interface(Token name) {
+    AstNode *node = ast_alloc(AST_INTERFACE, name);
+    node->as.class_decl.name = name;
+    return node;
+}
+
+void ast_class_add_field(AstNode *class_decl, Token name, AstNode *value, TypeRef type) {
     class_decl->as.class_decl.fields = grow_array(class_decl->as.class_decl.fields, class_decl->as.class_decl.field_count,
                                                   &class_decl->as.class_decl.field_capacity, sizeof(AstField));
     AstField *field = &class_decl->as.class_decl.fields[class_decl->as.class_decl.field_count++];
     field->name = name;
     field->value = value;
+    field->type = type;
 }
 
 void ast_class_add_method(AstNode *class_decl, AstNode *method) {
@@ -231,6 +325,10 @@ AstNode *ast_new_self(Token keyword) {
     return ast_alloc(AST_SELF, keyword);
 }
 
+AstNode *ast_new_super(Token keyword) {
+    return ast_alloc(AST_SUPER, keyword);
+}
+
 AstNode *ast_new_block(void) {
     AstNode *node = ast_alloc(AST_BLOCK, no_token());
     node->as.block.statements = NULL;
@@ -250,6 +348,10 @@ void ast_free(AstNode *node) {
 
     switch (node->type) {
         case AST_NUMBER:
+        case AST_FLOAT:
+        case AST_BOOL:
+        case AST_NULL:
+        case AST_SUPER:
         case AST_BREAK:
         case AST_CONTINUE:
         case AST_VARIABLE:
@@ -308,6 +410,7 @@ void ast_free(AstNode *node) {
             break;
         case AST_FUNCTION:
             free(node->as.function.params);
+            free(node->as.function.param_types);
             ast_free(node->as.function.body);
             break;
         case AST_CALL:
@@ -321,15 +424,23 @@ void ast_free(AstNode *node) {
             ast_free(node->as.return_stmt.value);
             break;
         case AST_CLASS:
-            for (int i = 0; i < node->as.class_decl.field_count; i++) {
+        case AST_INTERFACE: {
+            /* Inherited fields and methods are borrowed from the parent class (see ast.h). */
+            int resolved = node->as.class_decl.resolved;
+            int first_field = resolved ? node->as.class_decl.inherited_fields : 0;
+            int own_methods = resolved ? node->as.class_decl.own_methods : node->as.class_decl.method_count;
+            for (int i = first_field; i < node->as.class_decl.field_count; i++) {
                 ast_free(node->as.class_decl.fields[i].value);
             }
             free(node->as.class_decl.fields);
-            for (int i = 0; i < node->as.class_decl.method_count; i++) {
+            for (int i = 0; i < own_methods; i++) {
                 ast_free(node->as.class_decl.methods[i]);
             }
             free(node->as.class_decl.methods);
+            free(node->as.class_decl.bases);
+            free(node->as.class_decl.interfaces);
             break;
+        }
         case AST_FIELD:
             ast_free(node->as.field.object);
             break;

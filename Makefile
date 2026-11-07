@@ -1,9 +1,10 @@
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -g
 DEFS = -DNEPLANG_RUNTIME_DIR=\"$(CURDIR)/src\"
-SRC = src/lexer.c src/value.c src/ast.c src/parser.c src/modules.c src/checker.c src/interpreter.c src/rt.c src/ir.c src/vm.c src/cgen.c src/diagnostics.c src/main.c
+SRC = src/lexer.c src/value.c src/ast.c src/parser.c src/modules.c src/classes.c src/checker.c src/interpreter.c src/rt.c src/ir.c src/vm.c src/cgen.c src/diagnostics.c src/main.c
 BIN = bin/neplang
 PREFIX ?= /usr/local
+LDLIBS = -lm
 
 RUNTIME_FILES = src/value.c src/value.h src/rt.c src/rt.h src/diagnostics.c src/diagnostics.h src/token.h src/ast.h
 
@@ -13,11 +14,11 @@ all: $(BIN)
 
 $(BIN): $(SRC)
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(DEFS) -o $(BIN) $(SRC)
+	$(CC) $(CFLAGS) $(DEFS) -o $(BIN) $(SRC) $(LDLIBS)
 
 debug:
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(DEFS) -fsanitize=address,undefined -o $(BIN) $(SRC)
+	$(CC) $(CFLAGS) $(DEFS) -fsanitize=address,undefined -o $(BIN) $(SRC) $(LDLIBS)
 
 # Interpreter suites, then the same programs through the bytecode VM and the IR checks.
 test: all

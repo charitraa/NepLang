@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <math.h>
 #include "cgen.h"
 #include "rt.h"
 
@@ -21,6 +23,8 @@ static void emit_c_string(FILE *out, const char *s, int length) {
     }
     fputc('"', out);
 }
+
+static void emit_token_init(FILE *out, Token t);
 
 static void args_array(FILE *out, int depth, int argc) {
     fprintf(out, "Value args[] = {");
@@ -54,7 +58,22 @@ static void emit_function(const IrProgram *p, int index, FILE *out) {
 
         fprintf(out, "    ");
         switch (in->op) {
-            case IR_CONST_INT: fprintf(out, "s%d = value_int(%ldL);\n", d, in->a); break;
+            case IR_CONST_INT:
+                if (in->a == LONG_MIN) fprintf(out, "s%d = value_int(-%ldL - 1L);\n", d, LONG_MAX);
+                else fprintf(out, "s%d = value_int(%ldL);\n", d, in->a);
+                break;
+            case IR_CONST_FLOAT:
+                if (isinf(in->f)) fprintf(out, "s%d = value_float(%sHUGE_VAL);\n", d, in->f < 0 ? "-" : "");
+                else if (isnan(in->f)) fprintf(out, "s%d = value_float(NAN);\n", d);
+                else fprintf(out, "s%d = value_float(%.17g);\n", d, in->f);
+                break;
+            case IR_CONST_BOOL: fprintf(out, "s%d = value_bool(%d);\n", d, in->a ? 1 : 0); break;
+            case IR_CONST_NULL: fprintf(out, "s%d = value_null();\n", d); break;
+            case IR_COERCE:
+                fprintf(out, "s%d = rt_coerce(s%d, &TY[%ld], %ld, (Token)", d - 1, d - 1, in->a, in->b);
+                emit_token_init(out, in->token);
+                fprintf(out, ", %s);\n", at);
+                break;
             case IR_CONST_STR:
                 fprintf(out, "s%d = value_new_string(", d);
                 emit_c_string(out, p->strings[in->a], p->string_lengths[in->a]);
@@ -117,11 +136,11 @@ static void emit_function(const IrProgram *p, int index, FILE *out) {
             case IR_BUILTIN: {
                 int argc = (int)in->b;
                 if (argc == 0) {
-                    fprintf(out, "{ Value args[1]; s%d = rt_builtin(%ld, args, %s); }\n", d, in->a, at);
+                    fprintf(out, "{ Value args[1]; s%d = rt_builtin(%ld, args, 0, %s); }\n", d, in->a, at);
                 } else {
                     fprintf(out, "{ ");
                     args_array(out, d, argc);
-                    fprintf(out, " s%d = rt_builtin(%ld, args, %s); }\n", d - argc, in->a, at);
+                    fprintf(out, " s%d = rt_builtin(%ld, args, %d, %s); }\n", d - argc, in->a, argc, at);
                 }
                 break;
             }
@@ -132,8 +151,7 @@ static void emit_function(const IrProgram *p, int index, FILE *out) {
             case IR_PRINT: fprintf(out, "rt_print(s%d); value_release(s%d);\n", d - 1, d - 1); break;
             case IR_NEW_OBJECT: fprintf(out, "s%d = value_new_object(&K%ld);\n", d, in->a); break;
             case IR_INIT_FIELD:
-                fprintf(out, "{ Object *o = s%d.as.object; value_release(o->fields[%ld]); o->fields[%ld] = s%d; }\n",
-                        d - 2, in->a, in->a, d - 1);
+                fprintf(out, "rt_init_field(s%d, %ld, s%d, %s);\n", d - 2, in->a, d - 1, at);
                 break;
             case IR_DUP: fprintf(out, "s%d = value_retain(s%d);\n", d, d - 1); break;
             case IR_GET_FIELD:
@@ -148,6 +166,11 @@ static void emit_function(const IrProgram *p, int index, FILE *out) {
                 break;
             case IR_CALL_METHOD: {
                 int argc = (int)in->b;
+                fprintf(out, "if (s%d.type != VAL_OBJECT) { ", d - argc - 1);
+                args_array(out, d, argc + 1);
+                fprintf(out, " s%d = rt_value_method(args, %d, ", d - argc - 1, argc + 1);
+                emit_c_string(out, in->token.start, in->token.length);
+                fprintf(out, ", %d, %s); } else ", in->token.length, at);
                 fprintf(out, "{ const AstNode *k; int m = rt_find_method(s%d, ", d - argc - 1);
                 emit_c_string(out, in->token.start, in->token.length);
                 fprintf(out, ", %d, %d, %s, %s, &k); int f = method_fn(k, m); if (rt_call_depth >= 1000) rt_too_deep(",
@@ -169,17 +192,50 @@ static void emit_token_init(FILE *out, Token t) {
     fprintf(out, ", .length = %d }", t.length);
 }
 
-/* Class descriptions as static AST nodes, so the shared runtime (value.c, rt.c) can print objects
- * and look up fields and methods exactly as it does for the interpreter and VM. */
+static void emit_type_init(FILE *out, const TypeRef *t) {
+    fprintf(out, "{ .kind = (TypeKind)%d, .nullable = %d, .name = ", (int)t->kind, t->nullable);
+    emit_token_init(out, t->name);
+    fprintf(out, " }");
+}
+
+/* The written types used by IR_COERCE. */
+static void emit_types(const IrProgram *p, FILE *out) {
+    fprintf(out, "static const TypeRef TY[] = {");
+    for (int i = 0; i < p->type_count; i++) {
+        fprintf(out, "%s\n    ", i ? "," : "");
+        emit_type_init(out, p->types[i]);
+    }
+    fprintf(out, "%s};\n\n", p->type_count ? "\n" : "{ 0 }");
+}
+
+static int class_index(const IrProgram *p, const AstNode *decl) {
+    for (int i = 0; i < p->class_count; i++) {
+        if (p->classes[i].decl == decl) return i;
+    }
+    return -1;
+}
+
+/* Class descriptions as static AST nodes, so the shared runtime (value.c, rt.c) can print objects,
+ * look up fields and methods, check field types and 'is a' relations exactly as it does for the
+ * interpreter and VM. */
 static void emit_classes(const IrProgram *p, FILE *out) {
-    if (p->class_count == 0) return;
+    if (p->class_count == 0) {
+        fprintf(out, "static Value (*const FN[])(Value *) = {");
+        for (int i = 0; i < p->function_count; i++) fprintf(out, "%sfn_%d", i ? ", " : "", i);
+        fprintf(out, "};\nstatic int method_fn(const AstNode *k, int m) { (void)k; return m; }\n\n");
+        return;
+    }
+    for (int c = 0; c < p->class_count; c++) fprintf(out, "static AstNode K%d;\n", c);
     for (int c = 0; c < p->class_count; c++) {
         const AstNode *d = p->classes[c].decl;
         int nf = d->as.class_decl.field_count, nm = d->as.class_decl.method_count;
+        int ni = d->as.class_decl.interface_count;
         fprintf(out, "static AstField CF%d[] = {", c);
         for (int i = 0; i < nf; i++) {
             fprintf(out, "%s{ .name = ", i ? ", " : "");
             emit_token_init(out, d->as.class_decl.fields[i].name);
+            fprintf(out, ", .type = ");
+            emit_type_init(out, &d->as.class_decl.fields[i].type);
             fprintf(out, " }");
         }
         fprintf(out, "%s};\n", nf ? "" : "{ { 0 } }");
@@ -192,9 +248,15 @@ static void emit_classes(const IrProgram *p, FILE *out) {
         fprintf(out, "static AstNode *CMS%d[] = {", c);
         for (int m = 0; m < nm; m++) fprintf(out, "%s&CM%d_%d", m ? ", " : "", c, m);
         fprintf(out, "%s};\n", nm ? "" : "NULL");
-        fprintf(out, "static AstNode K%d = { .type = AST_CLASS, .as.class_decl = { .name = ", c);
+        fprintf(out, "static const AstNode *KI%d[] = {", c);
+        for (int i = 0; i < ni; i++) fprintf(out, "%s&K%d", i ? ", " : "", class_index(p, d->as.class_decl.interfaces[i]));
+        fprintf(out, "%s};\n", ni ? "" : "NULL");
+        fprintf(out, "static AstNode K%d = { .type = %s, .as.class_decl = { .name = ", c,
+                d->type == AST_INTERFACE ? "AST_INTERFACE" : "AST_CLASS");
         emit_token_init(out, d->as.class_decl.name);
-        fprintf(out, ", .fields = CF%d, .field_count = %d, .methods = CMS%d, .method_count = %d } };\n\n", c, nf, c, nm);
+        fprintf(out, ", .fields = CF%d, .field_count = %d, .methods = CMS%d, .method_count = %d", c, nf, c, nm);
+        if (d->as.class_decl.parent) fprintf(out, ", .parent = &K%d", class_index(p, d->as.class_decl.parent));
+        fprintf(out, ", .interfaces = KI%d, .interface_count = %d } };\n\n", c, ni);
     }
     fprintf(out, "static Value (*const FN[])(Value *) = {");
     for (int i = 0; i < p->function_count; i++) fprintf(out, "%sfn_%d", i ? ", " : "", i);
@@ -213,13 +275,15 @@ static void emit_classes(const IrProgram *p, FILE *out) {
 
 void cgen_emit(const IrProgram *program, FILE *out) {
     fprintf(out, "/* Generated by neplang. Do not edit. */\n");
-    fprintf(out, "#include <stddef.h>\n#include \"rt.h\"\n#define T(l, c) ((Token){ .line = (l), .col = (c) })\n\n");
+    fprintf(out, "#include <stddef.h>\n#include <math.h>\n#include \"rt.h\"\n#define T(l, c) ((Token){ .line = (l), .col = (c) })\n\n");
     fprintf(out, "static Value G[%d];\n\n", program->global_count > 0 ? program->global_count : 1);
     for (int i = 0; i < program->function_count; i++) fprintf(out, "static Value fn_%d(Value *args);\n", i);
     fprintf(out, "\n");
+    emit_types(program, out);
     emit_classes(program, out);
     for (int i = 0; i < program->function_count; i++) emit_function(program, i, out);
-    fprintf(out, "int main(void) {\n    for (int i = 0; i < %d; i++) G[i] = rt_unset();\n", program->global_count);
+    fprintf(out, "int main(int argc, char **argv) {\n    rt_set_args(argc - 1, argv + 1);\n");
+    fprintf(out, "    for (int i = 0; i < %d; i++) G[i] = rt_unset();\n", program->global_count);
     fprintf(out, "    value_release(fn_0(NULL));\n    return 0;\n}\n");
 }
 
@@ -264,7 +328,7 @@ int cgen_build(const IrProgram *program, const char *output_path, int keep_c) {
     size_t size = 400 + strlen(dir) * 4 + n * 2;
     char *command = malloc(size);
     if (!command) return 1;
-    snprintf(command, size, "%s -std=c11 -O2 -w -I'%s' -o '%s' '%s' '%s/value.c' '%s/rt.c' '%s/diagnostics.c'",
+    snprintf(command, size, "%s -std=c11 -O2 -w -I'%s' -o '%s' '%s' '%s/value.c' '%s/rt.c' '%s/diagnostics.c' -lm",
              cc && *cc ? cc : "cc", dir, output_path, c_path, dir, dir, dir);
     int status = system(command);
     if (status != 0) {

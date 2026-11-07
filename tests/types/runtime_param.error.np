@@ -1,0 +1,8 @@
+# the checker cannot know what x is; the runtime check catches it
+kaam f(x) {
+    farkau x
+}
+kaam g(int n) {
+    vana(n)
+}
+g(f("a"))

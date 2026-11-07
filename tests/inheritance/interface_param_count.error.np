@@ -1,0 +1,7 @@
+interface I {
+    kaam a(x)
+}
+class C(I) {
+    kaam a() {
+    }
+}

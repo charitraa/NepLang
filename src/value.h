@@ -6,6 +6,9 @@ typedef enum {
     VAL_ARRAY,
     VAL_STRING,
     VAL_OBJECT,
+    VAL_FLOAT,  /* a decimal number (double) */
+    VAL_BOOL,   /* sacho / jutho; stored in as.integer as 1 / 0 */
+    VAL_NULL,   /* khali */
     VAL_UNSET   /* a compiled-code variable slot that has not been assigned yet; never a user-visible value */
 } ValueType;
 
@@ -18,6 +21,7 @@ typedef struct {
     ValueType type;
     union {
         long integer;
+        double number;
         Array *array;
         String *string;
         Object *object;
@@ -57,6 +61,9 @@ struct Object {
 /* Ownership convention: a function returning a Value hands the caller one reference.
  * Whoever holds a Value must eventually pass it to value_release(). */
 Value value_int(long integer);
+Value value_float(double number);
+Value value_bool(int truth);
+Value value_null(void);
 Value value_new_array(void);
 void array_append(Array *array, Value item);  /* takes ownership of item */
 Value value_new_string(const char *chars, int length);  /* copies `chars` */
@@ -67,7 +74,16 @@ Value value_new_object(const struct AstNode *klass);  /* every field starts as 0
 Value value_retain(Value value);
 void value_release(Value value);
 
-const char *value_type_name(Value value);  /* "a number", "an array", "a string" or "an object", for error messages */
+const char *value_type_name(Value value);  /* "a number", "an array", "a string", ... for error messages */
 void value_print(Value value);
+/* Shortest text that reads back as the same double, always with a '.' or exponent ("2.0", "0.1"). */
+void value_format_float(double number, char *buffer, int size);
+/* Text of a value as '+' and string() show it (strings unquoted); a new string. Borrows `value`. */
+Value value_to_string(Value value);
+/* Structural equality used by ==, contains() and index_of(): numbers by value (1 == 1.0), strings by
+ * content, bools, khali, and arrays item by item; objects only by identity. */
+int value_equals(Value a, Value b);
+int value_is_number(Value value);   /* VAL_INT or VAL_FLOAT */
+double value_as_double(Value value); /* VAL_INT or VAL_FLOAT */
 
 #endif

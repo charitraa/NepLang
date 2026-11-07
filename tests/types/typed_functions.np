@@ -1,0 +1,26 @@
+kaam jamma(int a, int b) int {
+    farkau a + b
+}
+
+kaam aadha(float x) float {
+    farkau x / 2
+}
+
+kaam namaste(string naam) void {
+    vana("Namaste " + naam)
+}
+
+kaam khoja(array items, any target) int? {
+    ko_lagi i in 0..lambai(items) {
+        yedi items[i] == target {
+            farkau i
+        }
+    }
+    farkau khali
+}
+
+vana(jamma(2, 3))
+vana(aadha(3))
+namaste("Ram")
+vana(khoja([5, 6, 7], 6))
+vana(khoja([5, 6, 7], 9))

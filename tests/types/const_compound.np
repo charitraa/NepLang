@@ -1,0 +1,36 @@
+const MAX = 10
+const float RATE = 0.5
+vana(MAX * RATE)
+
+x = 5
+x += 3
+vana(x)
+x -= 1
+vana(x)
+x *= 2
+vana(x)
+x /= 4
+vana(x)
+x %= 2
+vana(x)
+
+s = "ab"
+s += "c"
+vana(s)
+vana(s * 3)
+
+a = [1, 2, 3]
+a[0] += 10
+vana(a)
+
+class Counter {
+    int n = 0
+    kaam badha() {
+        n += 1
+        yo.n += 10
+    }
+}
+c = Counter()
+c.badha()
+c.n *= 2
+vana(c.n)

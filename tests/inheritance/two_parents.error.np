@@ -1,0 +1,9 @@
+class A {
+    x = 1
+}
+class B {
+    y = 1
+}
+class C(A, B) {
+    z = 1
+}

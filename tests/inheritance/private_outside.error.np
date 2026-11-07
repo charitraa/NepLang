@@ -1,0 +1,11 @@
+class A {
+    _gopya = 1
+}
+class B(A) {
+    kaam f() int {
+        farkau _gopya
+    }
+}
+b = B()
+vana(b.f())
+vana(b._gopya)

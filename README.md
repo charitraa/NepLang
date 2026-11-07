@@ -236,6 +236,7 @@ The included examples:
 | `examples/arrays.np` | Arrays, `lambai`, looping over an array, a 2D matrix |
 | `examples/strings.np` | Strings, joining with `+`, reversing and counting characters |
 | `examples/classes.np` | Classes: fields, methods, `banau`, private `_` members |
+| `examples/types.np` | Types, `const`, floats, bools, `khali`, inheritance, interfaces, the standard library |
 
 The example files are in the repository's
 [`examples/`](https://github.com/charitraa/Nepa/tree/main/examples) folder. Download one,
@@ -262,22 +263,32 @@ vana(2)
 vana(10 + 20 * 3)    # 70
 ```
 
-### Numbers and arithmetic
+### Values
 
-A value is an **integer**, an **array**, a **string** or an **object** (see
-[Classes](#classes)). There are no decimal numbers
-yet.
+| Kind | Examples | `prakar(x)` |
+|---|---|---|
+| whole number | `42`, `-7` | `int` |
+| decimal number | `3.14`, `2.0`, `1e3` | `float` |
+| bool | `sacho` (true), `jutho` (false) | `bool` |
+| string | `"Namaste"` | `string` |
+| array | `[1, 2, 3]` | `array` |
+| object | `Manchhe()` (see [Classes](#classes)) | the class name |
+| nothing | `khali` | `khali` |
+
+### Numbers and arithmetic
 
 | Operator | Meaning | Example | Result |
 |---|---|---|---|
 | `+` `-` | add, subtract | `7 - 2` | `5` |
-| `*` `/` | multiply, integer divide | `7 / 2` | `3` |
+| `*` `/` | multiply, divide | `7 / 2`, `7.0 / 2` | `3`, `3.5` |
 | `%` | remainder | `7 % 2` | `1` |
 | `( )` | grouping | `(1 + 2) * 3` | `9` |
 | unary `-` `+` | sign | `-5` | `-5` |
 
-`*`, `/` and `%` bind tighter than `+` and `-`. Dividing by zero stops the program with
-an error.
+`*`, `/` and `%` bind tighter than `+` and `-`. Dividing two whole numbers gives a whole
+number (`7 / 2` is `3`); if either side is a decimal number the result is one too
+(`7 / 2.0` is `3.5`). Dividing by zero stops the program with an error. Convert with
+`int(x)` (drops the fraction), `float(x)` and `string(x)`.
 
 ### Variables
 
@@ -294,11 +305,42 @@ vana(byaj)    # 1500
 Using a variable before it has a value is an error. Names may only use ASCII letters,
 digits and `_`, so `baki` works but `bakī` does not.
 
+`x += 1` is short for `x = x + 1`; `-=`, `*=`, `/=` and `%=` work the same way, also on array
+items (`a[0] += 1`) and fields (`p.umar += 1`).
+
+### Types and constants
+
+A variable can be **declared** with a type. After that it only accepts values of that type,
+and the checker reports mistakes before the program runs:
+
+```
+int umar = 22
+string naam = "Sita"
+float dar = 2          # an int given to a float becomes 2.0
+bool thik = sacho
+array suchi = [1, 2]
+umar = "hello"         # Type error: expected int but received string.
+```
+
+- Types: `int`, `float`, `bool`, `string`, `array`, `object`, `any` (anything), or the name
+  of a class or interface.
+- `int? x = khali`: a `?` after the type also allows `khali`. Variables of a class type may
+  always be `khali`.
+- Without a value, a declared variable starts empty: `0`, `0.0`, `jutho`, `""`, `[]` or `khali`.
+- A declaration must be the first time the name gets a value in its scope.
+- `const MAX = 10` (or `const int MAX = 10`) makes a constant: changing it is an error.
+- Untyped variables (`x = 1`) still work as before and can hold anything.
+
 ### Comparisons
 
-`==  !=  <  <=  >  >=` give `1` for true and `0` for false. They compare two numbers or
-two strings (see [Strings](#strings)). A condition (`yedi`, `jabasamma`) must be a number:
-any non-zero value counts as true. You can't chain comparisons: `a < b < c` is an error.
+`==  !=  <  <=  >  >=` give `sacho` or `jutho`. `<` and friends compare two numbers or two
+strings (see [Strings](#strings)); `==` also compares bools, arrays (item by item) and
+`khali` (`x == khali`). You can't chain comparisons: `a < b < c` is an error.
+
+`ra` (and), `wa` (or) and `hoina` (not) combine conditions, and the right side of `ra`/`wa`
+only runs when needed. A condition (`yedi`, `jabasamma`) must be a bool or a number (any
+non-zero number counts as true). Bools are not numbers: `sacho + 1` is an error, but
+`int(sacho)` is `1`.
 
 ### Conditionals: `yedi` / `natara yedi` / `natara`
 
@@ -350,13 +392,28 @@ vana(jamma(10, 20))    # 30
 
 - Parameters are separated by commas. A function can have no parameters: `kaam f() { }`.
 - `farkau` exits right away, even from inside loops.
-- A function that ends without `farkau`, or uses a bare `farkau`, returns `0`.
+- A function that ends without `farkau`, or uses a bare `farkau`, returns `khali`.
 - You can call a function before its definition appears in the file.
 - Recursion works. Recursion deeper than 1000 calls stops with a clear error.
 - A function can read top-level variables. Assigning inside a function always creates or
   updates a **local** variable, so a function never changes a top-level one.
 - Functions are defined at the top level. You can't define a function inside another.
 - You can call a function as a statement by itself, e.g. `salam()`.
+
+Parameters and the result can have types. The type of the result goes after the `)`;
+`void` means the function gives nothing back:
+
+```
+kaam jamma(int a, int b) int {
+    farkau a + b
+}
+
+kaam namaste(string naam) void {
+    vana("Namaste " + naam)
+}
+```
+
+A wrong argument (`jamma("a", 1)`) or result is a type error.
 
 ### Arrays
 
@@ -378,7 +435,23 @@ ko_lagi x in ank {
 - A long array literal can span several lines.
 - Using an index outside `0` to `lambai(a) - 1` is an error.
 - Arrays are **shared**, not copied: after `b = a`, changing `b[0]` also changes `a[0]`.
-  The same happens when you pass an array to a function.
+  The same happens when you pass an array to a function. Use `a.copy()` for a copy.
+- `==` compares arrays item by item: `[1, 2] == [1, 2]` is `sacho`.
+
+Arrays have methods (see also [the standard library](#built-in-functions-and-the-standard-library)):
+
+```
+a = [3, 1, 2]
+a.push(5)              # [3, 1, 2, 5]   (same as thapa(a, 5))
+a.pop()                # 5              (same as hata(a))
+a.sort()               # [1, 2, 3]
+vana(a.contains(2))    # sacho
+vana(a.join("-"))      # 1-2-3
+vana(a.sum())          # 6
+```
+
+`push pop insert(i, x) remove(i) clear contains index_of reverse sort slice(from, to) join
+copy sum min max length`
 
 ### Strings
 
@@ -410,6 +483,13 @@ ko_lagi akshar in "abc" {
   backslash. A string must end on the line it starts on.
 - When an array is printed, the strings inside it are shown with quotes:
   `vana(["a", 1])` prints `["a", 1]`.
+- `"ab" * 3` repeats a string: `ababab`.
+- `"Mero naam ${naam} ho"` puts the value of an expression into the text.
+
+Strings have methods too: `"namaste".upper()` is `NAMASTE`.
+
+`upper lower trim split(sep) contains find replace(old, new) starts_with ends_with
+slice(from, to) repeat chars code reverse length`
 
 ### Classes
 
@@ -493,7 +573,105 @@ vana(k._baki)            # error: '_baki' is private to class 'Khata'
   `a.naam`. Passing an object to a function shares it too.
 - Classes are defined at the top level. A class can be used before its definition in the
   file. Class and function names share one namespace, so they can't clash.
-- Objects can't be compared with `==` yet, and there is no inheritance.
+- Objects can be compared with `khali` (`p == khali`), but two objects can't be compared with
+  `==`; compare their fields instead.
+
+**Typed fields.** A field can have a type, like a variable. Without a value it starts empty:
+
+```
+class Manchhe {
+    string naam
+    int umar
+}
+```
+
+**Inheritance.** `class Kukur(Janawar)` makes `Kukur` a child of `Janawar`: it gets all of
+`Janawar`'s fields and methods, and can replace (override) methods with its own versions.
+`super.method(...)` calls the parent's version, and `super(...)` inside `banau` runs the
+parent's constructor:
+
+```
+class Janawar {
+    string naam
+    kaam banau(string n) {
+        naam = n
+    }
+    kaam bolau() string {
+        farkau "..."
+    }
+}
+
+class Kukur(Janawar) {
+    kaam banau(string n) {
+        super(n)
+    }
+    kaam bolau() string {
+        farkau naam + ": Bhau bhau"
+    }
+}
+
+vana(Kukur("Tommy").bolau())    # Tommy: Bhau bhau
+```
+
+A class has at most one parent class. An overriding method takes the same number of
+parameters as the one it replaces. Private `_` members are shared between a class and its
+parents and children.
+
+**Interfaces.** An `interface` lists methods without bodies. A class that names it must
+define them all:
+
+```
+interface Bolne {
+    kaam bolau() string
+}
+
+class Suga(Bolne) {
+    kaam bolau() string {
+        farkau "Namaste!"
+    }
+}
+
+kaam bolaideu(Bolne b) {       # any object that is a Bolne
+    vana(b.bolau())
+}
+bolaideu(Suga())
+```
+
+List the parent class and interfaces together: `class Kukur(Janawar, Bolne, Khelne)`.
+An interface can extend other interfaces: `interface Naam(Aakar)`. Interfaces can't make
+objects.
+
+---
+
+## Built-in functions and the standard library
+
+Always available:
+
+| Function | Does |
+|---|---|
+| `lambai(x)` | length of an array or string |
+| `thapa(a, x)` / `hata(a)` | push onto / pop from an array |
+| `padha()` | read a line from the keyboard (a string) |
+| `sankhya(s)` | text to a number (`"42"` → `42`, `"2.5"` → `2.5`) |
+| `int(x)` `float(x)` `string(x)` `bool(x)` | convert |
+| `prakar(x)` | the type of a value, as a string (`"int"`, `"Manchhe"`, ...) |
+
+The standard library is built in; `import` a module to use it:
+
+```
+import math
+vana(math.sqrt(16))      # 4.0
+vana(math.PI)            # 3.141592653589793
+```
+
+| Module | Functions |
+|---|---|
+| `math` | `sqrt pow abs floor ceil round(x[, digits]) min max sin cos tan exp log log10 random randint(a, b) seed`, constants `PI E` |
+| `string` | the string methods as functions (`string.upper(s)`), plus `from_code(n)` and `join(array, sep)` |
+| `array` | the array methods as functions (`array.push(a, x)`), plus `range(n)` / `range(a, b)` |
+| `io` | `write(x)` (no newline), `read()`, `read_file(path)`, `write_file(path, text)`, `append_file(path, text)`, `exists(path)` |
+| `time` | `now()` (seconds), `millis()`, `sleep(ms)` |
+| `os` | `args()` (the program's command-line arguments), `env(name)`, `exit([code])` |
 
 ---
 
@@ -512,7 +690,11 @@ Variable 'bhitra' is not defined. Assign it a value first, e.g. 'bhitra = 0'.
 ```
 
 Only the first syntax error is reported. Fix it and run the program again. Keywords can't
-be used as variable names (`yedi = 5` is an error).
+be used as variable names (`yedi = 5` is an error). Before a program runs, the checker
+reports every mistake it can prove: undefined names (with a suggestion such as
+`Did you mean 'umar'?`), wrong argument counts, type errors such as
+`Type error: expected int but received string.`, changed constants, and missing interface
+methods.
 
 ---
 
@@ -529,25 +711,34 @@ be used as variable names (`yedi = 5` is an error).
 | `kaam` | work / task | `function` |
 | `farkau` | return / send back | `return` |
 | `class` | class | `class` |
+| `interface` | interface | `interface` |
+| `super` | the parent class | `super` |
 | `yo` | this | `this` / `self` |
+| `ra` / `wa` / `hoina` | and / or / not | `and` / `or` / `not` |
+| `ruk` / `agadi` | stop / go ahead | `break` / `continue` |
+| `sacho` / `jutho` | true / false | `true` / `false` |
+| `khali` | empty | `null` / `None` |
+| `const` | constant | `const` |
+| `import` | import | `import` |
 
 `banau` ("create") is not a keyword, but a method with that name is a class's constructor.
-`lambai` ("length") is a built-in function.
+`lambai` ("length") is a built-in function. The type names (`int`, `string`, ...) are not
+keywords either.
 
 ---
 
 ## Current limitations
 
-NepLang is still early. These features are **not** available yet:
+These parts of the original design are **not** available yet:
 
-- floating-point numbers, a separate bool type (`sacho`/`jutho` are just 1 and 0), `khali` (null)
-- inheritance, interfaces, comparing objects with `==`
-- typed field declarations like `string naam` (planned with the type checker)
+- generic types (`array<int>`), dictionaries/maps, closures and functions as values
+- concurrency (`async`/`await`, threads, channels) and the `http`, `json`, `crypto` and
+  `database` modules
+- `neplang format`, `neplang test`, and Nepali error messages (`--lang=ne`)
 - `"${...}"` pieces can't contain a `"` (a string ends at the next quote); write `\${` for a literal `${`
+- `x += e` on an array item or field evaluates the target twice (`a[f()] += 1` calls `f` twice)
 
 Expressions may span lines after an operator, or inside `( )`, call arguments and `[ ]`.
-
-String interpolation: `"Mero naam ${naam} ho"` joins text and expressions.
 
 ---
 
@@ -556,7 +747,8 @@ String interpolation: `"Mero naam ${naam} ho"` joins text and expressions.
 ```bash
 make          # build bin/neplang
 make debug    # build with AddressSanitizer + UBSan (use while developing)
-make test     # build, then run every test suite under tests/
+make test     # build, then run every test suite under tests/ (interpreter + VM)
+make test-all # also compile every test to a native executable
 make clean    # delete bin/
 ```
 
@@ -578,7 +770,9 @@ To add a test, drop the files into a suite folder. No registration is needed.
 ### How it works
 
 ```
-source.np → Lexer → tokens → Parser (recursive descent) → AST → Interpreter (tree-walk) → output
+source.np → Lexer → Parser → AST → imports → classes → checker ─┬→ Interpreter (tree-walk)
+                                                              └→ IR → optimizer ─┬→ bytecode VM
+                                                                                 └→ C → native executable
 ```
 
 | File | Role |
@@ -586,10 +780,15 @@ source.np → Lexer → tokens → Parser (recursive descent) → AST → Interp
 | `src/lexer.c` | Turns source text into tokens; keywords live in the `keywords[]` table |
 | `src/parser.c` | Recursive-descent parser that builds the AST |
 | `src/ast.c` / `ast.h` | AST node types, constructors, and `ast_free` |
+| `src/modules.c` | `import`: splices files in, enables standard-library modules |
+| `src/classes.c` | Resolves inheritance and interfaces |
+| `src/checker.c` | Static checks and type errors before anything runs |
 | `src/interpreter.c` | Walks the AST and runs the program |
-| `src/value.c` / `value.h` | Runtime values: numbers, arrays, strings and objects |
+| `src/ir.c`, `vm.c`, `cgen.c` | IR + optimizer, bytecode VM, C code generator |
+| `src/rt.c` / `rt.h` | Runtime shared by all backends: operators, types, objects, the standard library |
+| `src/value.c` / `value.h` | Runtime values |
 | `src/diagnostics.c` | Shared error reporter (file, line, column, caret) |
-| `src/main.c` | Reads the file and connects the pipeline |
+| `src/main.c` | Command line, REPL, and the pipeline |
 
 ### Releasing prebuilt binaries
 
@@ -639,28 +838,54 @@ install.ps1   one-line installer for Windows
 12. ✅ Bytecode VM (`--vm`)
 13. ✅ Intermediate representation (`--ir`, with constant folding and dead-code removal)
 14. ✅ Native code generation (`--emit-c`, `--build`: NepLang → C → executable)
+15. ✅ Type system: `int float bool string array object any`, `?` nullable, class types, `void`, `const`
+16. ✅ Inheritance, interfaces and `super`
+17. ✅ Standard library (`math string array io time os`) and methods on arrays and strings
+18. ✅ REPL and `run` / `check` / `build` commands
 
 ### Ways to run a program
 
 ```bash
-neplang prog.np                  # tree-walking interpreter (supports everything)
+neplang                          # interactive REPL
+neplang prog.np [args...]        # tree-walking interpreter (or: neplang run prog.np)
+neplang check prog.np            # report errors without running
+neplang build prog.np -o prog    # native executable (same as --build)
 neplang --vm prog.np             # compile to bytecode, run on the virtual machine
 neplang --ir prog.np             # print the optimized intermediate representation
 neplang --emit-c prog.np         # print the generated C source
 neplang --build prog.np -o prog  # native executable (needs a C compiler: cc, or $CC)
 ```
 
-All four execution paths share one runtime (`src/rt.c`) so they print identical output and
-identical error messages, classes included (native programs report runtime errors without the
+All execution paths share one runtime (`src/rt.c`) so they print identical output and
+identical error messages, every feature included (native programs report runtime errors without the
 source line). `--build` finds its runtime sources via `NEPLANG_RUNTIME`, else
 the installed `share/neplang/runtime`, else the checkout's `src/`. Native speed on
 `fib(30)`: interpreter 0.80 s, VM 0.52 s, native 0.10 s.
 
 ### Modules
 
-`import "helpers.np"` (or `import math`, same as `import "math.np"`) splices another file's
-functions, classes and variables into the program. Files are looked up next to the importing
-file, then in each directory of `NEPLANG_PATH`; each file loads once, cycles are harmless.
+`import "helpers.np"` (or `import helpers`, same as `import "helpers.np"`) splices another
+file's functions, classes and variables into the program. Files are looked up next to the
+importing file, then in each directory of `NEPLANG_PATH`; each file loads once, cycles are
+harmless. The names of the standard-library modules (`import math`, ...) always mean the
+built-in module; import a file with such a name with quotes: `import "math.np"`.
+
+### The REPL
+
+Run `neplang` with no file to type code and see results right away. A bare expression is
+printed (unless it is `khali`); an open `{` continues on the next line; an error doesn't end
+the session; a function can be redefined. Type `exit` or press Ctrl-D to leave.
+
+```
+> x = 5
+> x * 2
+10
+> kaam sq(n) {
+...     farkau n * n
+... }
+> sq(x)
+25
+```
 
 ---
 

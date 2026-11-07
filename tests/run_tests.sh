@@ -55,6 +55,30 @@ else
     pass=$((pass + 1))
 fi
 
+# cli_check NAME EXPECTED ACTUAL
+cli_check() {
+    if [ "$3" == "$2" ]; then
+        echo "PASS  $1"
+        pass=$((pass + 1))
+    else
+        echo "FAIL  $1  (expected '$2', got '$3')"
+        fail=$((fail + 1))
+    fi
+}
+
+TMPDIR_CLI=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_CLI"' EXIT
+printf 'import os\nvana(os.args())\n' > "$TMPDIR_CLI/args.np"
+cli_check "program arguments" '["a", "b c"]' "$("$BIN" "$TMPDIR_CLI/args.np" a "b c" 2>&1)"
+cli_check "run subcommand" '["x"]' "$("$BIN" run "$TMPDIR_CLI/args.np" x 2>&1)"
+cli_check "check subcommand" "$TMPDIR_CLI/args.np: no errors found." "$("$BIN" check "$TMPDIR_CLI/args.np" 2>&1)"
+"$BIN" check tests/types/int_gets_string.error.np >/dev/null 2>&1
+cli_check "check reports errors" "1" "$?"
+
+# the REPL: expressions are echoed, state persists, errors don't end the session
+repl_out=$(printf 'x = 5\nx * 2\nkaam sq(n) {\n    farkau n * n\n}\nsq(x)\nvana(nope)\n"after error"\nthapa([1], 2)\nexit\n' | "$BIN" 2>/dev/null | tail -n +2 | sed -e 's/\(> \|\.\.\. \)//g' | tr '\n' '|')
+cli_check "repl session" "10|25|after error|" "$repl_out"
+
 echo ""
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

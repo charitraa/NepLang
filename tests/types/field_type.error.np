@@ -1,0 +1,5 @@
+class P {
+    int n = 0
+}
+p = P()
+p.n = "x"

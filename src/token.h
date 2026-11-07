@@ -3,6 +3,9 @@
 
 typedef enum {
     TOKEN_INT,
+    TOKEN_FLOAT,    /* 3.14 -- the parser converts the text with strtod */
+    TOKEN_BOOL,     /* sacho / jutho; value is 1 / 0 */
+    TOKEN_KHALI,    /* khali (null) */
     TOKEN_STRING,   /* the slice includes both quotes; escapes are decoded by the parser */
     TOKEN_PLUS,
     TOKEN_MINUS,
@@ -25,6 +28,12 @@ typedef enum {
     TOKEN_DOT,
     TOKEN_DOT_DOT,
     TOKEN_COMMA,
+    TOKEN_QUESTION,      /* '?' after a type: it may also be khali */
+    TOKEN_PLUS_EQUAL,    /* += */
+    TOKEN_MINUS_EQUAL,   /* -= */
+    TOKEN_STAR_EQUAL,    /* *= */
+    TOKEN_SLASH_EQUAL,   /* /= */
+    TOKEN_PERCENT_EQUAL, /* %= */
     TOKEN_NEWLINE,
     TOKEN_IDENT,
     TOKEN_VANA,
@@ -43,6 +52,9 @@ typedef enum {
     TOKEN_RUK,      /* break */
     TOKEN_AGADI,    /* continue */
     TOKEN_IMPORT,
+    TOKEN_INTERFACE,
+    TOKEN_SUPER,
+    TOKEN_CONST,
     TOKEN_EOF,
     TOKEN_ERROR
 } TokenType;

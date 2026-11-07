@@ -1,0 +1,4 @@
+kaam f() int {
+    vana(1)
+}
+f()

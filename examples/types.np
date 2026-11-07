@@ -1,0 +1,65 @@
+# Types, constants, inheritance, interfaces and the standard library
+
+import math
+
+const int PASS_MARK = 40
+
+interface Parichaya {
+    kaam varnan() string
+}
+
+class Manchhe(Parichaya) {
+    string naam
+    int umar
+
+    kaam banau(string naam, int umar) {
+        yo.naam = naam
+        yo.umar = umar
+    }
+
+    kaam varnan() string {
+        farkau "${naam} (${umar})"
+    }
+}
+
+class Bidyarthi(Manchhe) {
+    array ank
+
+    kaam banau(string naam, int umar, array ank) {
+        super(naam, umar)
+        yo.ank = ank
+    }
+
+    kaam ausat() float {
+        farkau float(ank.sum()) / ank.length()
+    }
+
+    kaam varnan() string {
+        farkau super.varnan() + ", ausat " + math.round(ausat(), 1)
+    }
+}
+
+kaam pass_bhayo(Bidyarthi b) bool {
+    farkau b.ausat() >= PASS_MARK
+}
+
+array sabai = [
+    Bidyarthi("Sita", 16, [78, 85, 90]),
+    Bidyarthi("Ram", 17, [35, 42, 30]),
+    Manchhe("Gita", 40)
+]
+
+ko_lagi m in sabai {
+    vana(m.varnan())
+    yedi prakar(m) == "Bidyarthi" {
+        vana("  pass: " + pass_bhayo(m))
+    }
+}
+
+Bidyarthi? khoji = khali
+ko_lagi m in sabai {
+    yedi prakar(m) == "Bidyarthi" ra khoji == khali {
+        khoji = m
+    }
+}
+vana("Pahilo bidyarthi: " + khoji.naam)

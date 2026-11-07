@@ -1,0 +1,2 @@
+import math
+vana(math.sqroot(4))

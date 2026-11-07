@@ -1,0 +1,9 @@
+import io
+import os
+io.write("no newline, ")
+io.write(42)
+vana("")
+vana(io.exists("tests/stdlib/io_os.np"))
+vana(io.exists("tests/stdlib/missing.txt"))
+vana(lambai(os.args()))
+vana(os.env("NEPLANG_SURELY_NOT_SET"))

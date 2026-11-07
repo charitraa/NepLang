@@ -1,0 +1,9 @@
+class A {
+    kaam banau() {
+    }
+}
+class B(A) {
+    kaam f() {
+        super()
+    }
+}

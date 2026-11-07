@@ -1,0 +1,35 @@
+vana(sacho)
+vana(jutho)
+vana(3 > 2)
+vana(hoina sacho)
+vana(sacho ra jutho)
+vana(sacho wa jutho)
+vana(sacho == sacho)
+vana(sacho != jutho)
+vana(bool(0))
+vana(bool("x"))
+vana(bool([]))
+vana(int(sacho) + int(sacho))
+vana(khali)
+vana(khali == khali)
+vana(1 == khali)
+x = khali
+yedi x == khali {
+    vana("x is khali")
+}
+vana(prakar(khali))
+vana(prakar(sacho))
+vana(prakar(1))
+vana(prakar("a"))
+vana(prakar([]))
+vana([sacho, khali, 1.5, "s"])
+
+# a function without 'farkau' gives back khali
+kaam kei_chaina() {
+}
+vana(kei_chaina())
+
+# numbers still work as conditions
+yedi 1 {
+    vana("one is true")
+}

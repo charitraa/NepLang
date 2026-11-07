@@ -39,7 +39,33 @@ implemented as `parse_comparison` → `parse_and` → `parse_not` → `parse_com
 (break) / `agadi` (continue), parsed only inside loops (`parser->loop_depth`) and unwound via
 `interp->breaking`/`continuing` (`UNWINDING()` / `end_loop_iteration()`); builtins `lambai`,
 `thapa(arr, v)` (push), `hata(arr)` (pop), `sankhya(str)` (string → number), `padha()` (read a
-line from stdin); tests in `tests/basics/`. **Post-M14 additions:** string interpolation `"a ${expr} b"` (desugared in `parse_string` to `"a " + (expr) + " b"` via a sub-parser on a `Lexer` with `end` set; `\$` escapes; no `"` inside `${}`); expressions continue across lines after binary operators and inside `( )`/call args (`skip_newlines`); `sacho`/`jutho` lexed as `TOKEN_INT` 1/0. There are no floats, real booleans, `khali`, or inheritance yet.
+line from stdin); tests in `tests/basics/`. **Post-M14 additions:** string interpolation `"a ${expr} b"` (desugared in `parse_string` to `"a " + (expr) + " b"` via a sub-parser on a `Lexer` with `end` set; `\$` escapes; no `"` inside `${}`); expressions continue across lines after binary operators and inside `( )`/call args (`skip_newlines`); `sacho`/`jutho` lexed as `TOKEN_INT` 1/0 (superseded below).
+
+**Phase 2 (post-M14, "complete language"):** real value types `VAL_FLOAT` (`3.14`, `1e3`; `/` on two
+ints stays integer division), `VAL_BOOL` (`sacho`/`jutho` are `TOKEN_BOOL`; comparisons/`ra`/`wa`/`hoina`
+yield bools, printed `sacho`/`jutho`; bools are not numbers — `sacho + 1` is an error, `int(b)` converts;
+numbers still work as conditions) and `VAL_NULL` (`khali`; functions without `farkau` return it; REPL echo
+skips it). Written types (`TypeRef` in ast.h): `int float bool string array object any void` or a class /
+interface name (`TYPE_CLASS`, implicitly nullable), `?` suffix = nullable. Declarations `TYPE name [= v]`
+(detected by `at_typed_name()`: IDENT followed by IDENT or `?`, via `peek_token()` on a lexer copy; type
+names are *not* keywords) and `const [TYPE] NAME = v` are `AST_ASSIGN` with `type`/`is_const`; untyped
+declarations default via `ast_default_for`. Typed params `kaam f(int a) int {`, return type after `)`,
+`void` (parser rejects `farkau value` there). Typed fields `string naam` (no value needed). Compound
+`+= -= *= /= %=` desugar in `parse_assignment` to `x = x op e` using `ast_clone` (target evaluated twice).
+Inheritance `class Kukur(Janawar, Bolne)` / `interface Bolne(Other) { kaam bolau() string }` (bodiless),
+resolved by `src/classes.c` after modules and before the checker (layout documented on `class_decl` in
+ast.h: inherited fields first and borrowed, own methods first then inherited borrowed ones,
+`function.owner` = declaring class). `super.m(...)` / `super(...)` (only in `banau`) are `AST_CALL` with an
+`AST_SUPER` receiver (`super(...)` keeps name token "super"). Standard library: all builtins live in the
+`BUILTINS[]` table in rt.c (global ones, `module.fn` ones, and array/string methods `a.push(x)` =
+`array.push(a, x)` via `rt_value_method`). `import math` (bare name of a stdlib module) is handled in
+modules.c: no file, and `rewrite_module_uses()` turns `math.f(x)` into `AST_CALL` with `call.module` set
+and `math.PI` into a 0-arg module call; quoted `import "math.np"` still loads a file. Types are enforced
+at runtime by `rt_coerce` (int→float converts) in all backends (`IR_COERCE` with `IrProgram.types`), and
+statically by the checker. CLI: `neplang` alone = REPL (`parser.repl` echoes bare top-level expressions;
+`rt_recover` jmp_buf + `interpreter_recover`; functions may be redefined), `run`/`check`/`build`
+subcommands, args after the file → `os.args()`. Not done: generics, maps, closures, concurrency,
+http/json/crypto/db modules, `format`/`test` commands, `--lang=ne`.
 
 **Later milestones (all done):**
 - *Symbol table (M9)*: `Scope` in `interpreter.c` is a hashed table (dense `vars[]` + open-addressing `slots[]`, FNV-1a).
@@ -50,6 +76,11 @@ line from stdin); tests in `tests/basics/`. **Post-M14 additions:** string inter
 - *VM (M12)*: `src/vm.c`, explicit frame stack, call depth 1000. `neplang --vm`.
 - *Native (M14)*: `src/cgen.c` turns IR into C (stack slots become variables `s0..`, labels become C labels) and runs the system C compiler against value.c/rt.c/diagnostics.c. `neplang --emit-c` / `--build prog.np -o out`. `DEFS` in the Makefile bakes in the runtime dir (`make install` rebuilds with the installed one).
 - *Classes in the compiled backends*: each method is an `IrFunction` with `yo` in slot 0 (`param_count` includes it); `IrProgram.classes` maps class → AST_CLASS decl + `method_fn[]`. Ops `IR_NEW_OBJECT/INIT_FIELD/DUP/GET_FIELD/SET_FIELD/CALL_METHOD`; field/method lookup, privacy and arity errors are in `rt.c` (`rt_get_field`, `rt_find_method`), keyed by name at runtime with `a` = enclosing class for the privacy check. Bare field names in methods resolve statically (`is_bare_field`), field defaults are inlined at each construction site compiled in global-only mode. Native: `cgen.c` emits static `AstNode` class descriptions (`K0..`) so `value.c`/`rt.c` work unchanged. Known edge: a `ko_lagi` variable named like a field is always a local.
+- *Phase 2 in the compiled backends*: only a class's *own* methods are compiled; `method_fn[]` entries for
+  inherited methods point at the owner's function. Interfaces are in `IrProgram.classes` too (no methods
+  compiled; cgen emits them so `rt_is_a` works). `super` calls resolve statically to `IR_CALL`. Typed
+  globals/locals are pre-scanned (`declare_globals` / `declare_assigned`) so every store coerces. cgen
+  always emits `FN[]`/`method_fn` (array/string method calls go through `IR_CALL_METHOD`) and needs `-lm`.
 - *Tests*: `make test` = interpreter suites + `tests/run_backends.sh vm` (re-runs every program through the VM, plus IR checks); `make test-native` does the same via native executables; `make test-all` both.
 
 Milestone order follows `docs/prompt.txt` §33 where it and the README disagreed (strings
@@ -84,10 +115,9 @@ There is no test framework beyond `tests/run_tests.sh`, a plain bash script:
 
 ## Architecture
 
-Straight-line pipeline, no bytecode/VM yet (that's a later milestone):
-
 ```
-source file → Lexer → Token stream → Parser (recursive descent) → AST → Interpreter (tree-walk) → stdout
+source → Lexer → Parser → AST → modules_resolve → classes_resolve_program → check_program ─┬→ interpret
+                                                                         └→ ir_compile → ir_optimize → vm_run / cgen
 ```
 
 - `src/value.h`/`value.c` — runtime `Value` (tagged union: `VAL_INT`, `VAL_ARRAY`,
@@ -146,7 +176,11 @@ source file → Lexer → Token stream → Parser (recursive descent) → AST �
   still a `char`. Growable arrays (block statements, params, call args) share `grow_array()`
   in `ast.c`. An `else_branch` is either a block or a nested `AST_IF` (for `natara yedi`). Variable/assign nodes keep their name `Token` for error locations. `ast_free` recursively frees a tree; every node allocated by `ast_new_*` must
   eventually pass through it.
-- `src/interpreter.c` — tree-walking evaluator: `execute` runs statements, `eval` evaluates
+- `src/interpreter.c` — (Phase 2: all value operations, field/method lookup, builtins and runtime
+  errors now go through `rt.c`, same as the VM/native backends; `Variable` carries `type`/`is_const`/`decl`;
+  `interp->self_class` is the running method's declaring class, used for privacy and `super`; public API
+  `interpreter_new/run/recover/free` for the REPL. The rest of this paragraph is the original design.)
+  Tree-walking evaluator: `execute` runs statements, `eval` evaluates
   expressions, directly on the AST (no IR). Variables live in flat, linearly-searched
   `Scope`s (names are source slices) — the hashed symbol table is its own later milestone.
   `interp->locals` is the current call's scope (NULL at top level): reads check locals then

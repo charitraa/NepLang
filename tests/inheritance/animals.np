@@ -1,0 +1,67 @@
+interface Bolne {
+    kaam bolau() string
+}
+
+class Janawar(Bolne) {
+    string naam
+    int _khutta = 4
+
+    kaam banau(string n) {
+        naam = n
+    }
+
+    kaam bolau() string {
+        farkau "..."
+    }
+
+    kaam parichaya() {
+        vana(naam + " bhancha: " + bolau())
+    }
+
+    kaam khutta() int {
+        farkau _khutta
+    }
+}
+
+class Kukur(Janawar) {
+    string jaat = "local"
+
+    kaam banau(string n, string j) {
+        super(n)
+        jaat = j
+    }
+
+    kaam bolau() string {
+        farkau "Bhau bhau (" + super.bolau() + ")"
+    }
+}
+
+class Charo(Janawar) {
+    kaam banau(string n) {
+        super(n)
+        _khutta = 2
+    }
+    kaam bolau() string {
+        farkau "Chiu chiu"
+    }
+}
+
+array janawar = [Janawar("Gai"), Kukur("Tommy", "German"), Charo("Bhangera")]
+ko_lagi j in janawar {
+    j.parichaya()
+    vana(j.khutta())
+}
+k = Kukur("Moti", "Bhote")
+vana(k)
+vana(prakar(k))
+
+kaam bolaideu(Bolne b) {
+    vana(b.bolau())
+}
+bolaideu(k)
+
+Janawar? kohi = khali
+vana(kohi == khali)
+kohi = Charo("Kag")
+vana(kohi.naam)
+vana(kohi != khali)

@@ -15,6 +15,9 @@ typedef struct {
     int in_function;   /* 1 while parsing a 'kaam' body */
     int in_method;     /* 1 while parsing a method of a 'class' ('yo' is allowed) */
     int in_constructor; /* 1 while parsing a class's 'banau' method */
+    int in_interface;  /* 1 while parsing the methods of an 'interface' (no bodies) */
+    int return_void;   /* 1 while parsing a function declared 'void' ('farkau' can't give a value) */
+    int repl;          /* set by the REPL: a bare expression on its own line is printed */
 } Parser;
 
 void parser_init(Parser *parser, Lexer *lexer, const char *source, const char *filename);

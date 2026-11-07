@@ -1,0 +1,6 @@
+class A(B) {
+    x = 1
+}
+class B(A) {
+    y = 1
+}

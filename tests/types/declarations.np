@@ -1,0 +1,45 @@
+# Written types: a declared variable only accepts values of its type.
+int umar = 22
+float pi = 3.14
+bool thik = sacho
+string naam = "Sita"
+array suchi = [1, 2, 3]
+any kehi = 1
+kehi = "aru"
+vana(umar)
+vana(pi)
+vana(thik)
+vana(naam)
+vana(suchi)
+vana(kehi)
+
+# without a value, a typed name starts empty
+int n
+float f
+bool b
+string s
+array a
+vana(n)
+vana(f)
+vana(b)
+vana("[" + s + "]")
+vana(a)
+
+# an int given to a float becomes a float
+float x = 2
+vana(x)
+x = 7
+vana(x / 2)
+
+# '?' allows khali
+int? maybe = khali
+vana(maybe)
+maybe = 5
+vana(maybe + 1)
+
+# declarations work inside functions too
+kaam dobbar(int k) int {
+    int result = k * 2
+    farkau result
+}
+vana(dobbar(21))

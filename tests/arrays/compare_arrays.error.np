@@ -1,2 +1,2 @@
 a = [1, 2]
-vana(a == a)
+vana(a < a)

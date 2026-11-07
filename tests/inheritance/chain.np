@@ -1,0 +1,60 @@
+# Three levels: methods and fields are inherited all the way down; private members ('_x') are
+# shared inside the family; an object is an instance of every ancestor and interface.
+interface Aakar {
+    kaam chhetrafal() float
+}
+
+interface Naam(Aakar) {
+    kaam naam() string
+}
+
+class Sabai(Naam) {
+    int _id = 7
+    kaam naam() string {
+        farkau "aakar"
+    }
+    kaam chhetrafal() float {
+        farkau 0
+    }
+    kaam varnan() string {
+        farkau naam() + " #" + _id + " = " + chhetrafal()
+    }
+}
+
+class Ayat(Sabai) {
+    float lambai_ = 0
+    float chaudai = 0
+    kaam banau(float l, float c) {
+        lambai_ = l
+        chaudai = c
+    }
+    kaam naam() string {
+        farkau "ayat"
+    }
+    kaam chhetrafal() float {
+        farkau lambai_ * chaudai
+    }
+}
+
+class Varga(Ayat) {
+    kaam banau(float s) {
+        super(s, s)
+        _id = 9
+    }
+    kaam naam() string {
+        farkau "varga (" + super.naam() + ")"
+    }
+}
+
+kaam dekhau(Aakar a) {
+    vana(a.chhetrafal())
+}
+
+array aakar = [Sabai(), Ayat(2, 3), Varga(4)]
+ko_lagi a in aakar {
+    vana(a.varnan())
+    dekhau(a)
+}
+Naam n = Varga(1.5)
+vana(n.naam())
+vana(n)

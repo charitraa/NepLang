@@ -1,0 +1,6 @@
+interface Bolne {
+    kaam bolau()
+}
+class Dhunga(Bolne) {
+    x = 1
+}
