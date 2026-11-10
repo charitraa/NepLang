@@ -1,6 +1,7 @@
 # .deb / .rpm package definition for nfpm (https://nfpm.goreleaser.com).
 # Used by .github/workflows/release.yml; NEPLANG_VERSION and NFPM_ARCH (amd64 | arm64)
-# and NEPLANG_BINARY come from the environment.
+# come from the environment; the workflow copies the binary to package/neplang first
+# (nfpm doesn't expand environment variables in contents paths).
 name: neplang
 arch: ${NFPM_ARCH}
 platform: linux
@@ -16,7 +17,7 @@ homepage: https://github.com/charitraa/NepLang
 license: MIT
 
 contents:
-  - src: ${NEPLANG_BINARY}
+  - src: package/neplang
     dst: /usr/bin/neplang
     file_info:
       mode: 0755

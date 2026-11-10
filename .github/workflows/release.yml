@@ -88,9 +88,11 @@ jobs:
               amd64) bin=neplang-linux-x86_64 ;;
               arm64) bin=neplang-linux-arm64 ;;
             esac
-            chmod +x "dist/$bin"
+            mkdir -p package
+            cp "dist/$bin" package/neplang
+            chmod +x package/neplang
             for fmt in deb rpm; do
-              NFPM_ARCH=$arch NEPLANG_BINARY="dist/$bin" \
+              NFPM_ARCH=$arch \
                 "$(go env GOPATH)/bin/nfpm" package -f packaging/nfpm.yaml -p $fmt -t dist/
             done
           done

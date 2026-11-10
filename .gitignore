@@ -35,3 +35,6 @@ Thumbs.db
 
 # Local scratch
 test.np
+
+# Release packaging scratch (see .github/workflows/release.yml)
+package/
