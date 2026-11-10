@@ -1,9 +1,9 @@
 # NepLang
 
-**NepLang** is a small programming language for Nepali developers. Its keywords are
-romanized Nepali words for control flow and everyday actions (`vana` = print,
-`yedi` = if, `natara` = else, `kaam` = function, `farkau` = return), mixed with plain
-English for technical ideas.
+**NepLang** is a programming language for Nepali developers. Its keywords are romanized
+Nepali words for control flow and everyday actions (`vana` = print, `yedi` = if,
+`natara` = else, `kaam` = function, `farkau` = return), mixed with plain English for
+technical ideas.
 
 ```
 kaam factorial(n) {
@@ -16,199 +16,113 @@ kaam factorial(n) {
 vana(factorial(6))    # 720
 ```
 
-NepLang is written in C (C11) with no dependencies. You run a `.np` file the same way you
-run a Python file: `neplang file.np` instead of `python file.py`. It has a REPL, a static
-checker that catches mistakes before your program runs, a bytecode VM, and it can compile
-programs to native executables.
+You run a `.np` file the same way you run a Python file: `neplang file.np` instead of
+`python file.py`. NepLang comes with an interactive REPL, a checker that catches mistakes
+before your program runs, and it can turn programs into native executables. It runs on
+Windows, Linux and macOS.
 
 ---
 
 ## Table of contents
 
-- [Installation](#installation)
-  - [Arch Linux / Manjaro / CachyOS](#arch-linux--manjaro--cachyos)
-  - [Ubuntu / Debian / Fedora / other Linux](#ubuntu--debian--fedora--other-linux)
-  - [Windows](#windows)
-  - [macOS](#macos)
-  - [Prebuilt binaries](#prebuilt-binaries)
-  - [Uninstall](#uninstall)
-- [Running a program (like Python)](#running-a-program-like-python)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Running programs](#running-programs)
 - [Syntax at a glance](#syntax-at-a-glance)
 - [Language guide](#language-guide)
 - [Built-in functions and the standard library](#built-in-functions-and-the-standard-library)
 - [Error messages](#error-messages)
 - [Keyword reference](#keyword-reference)
-- [Current limitations](#current-limitations)
-- [Development](#development)
-- [Project layout](#project-layout)
-- [Roadmap](#roadmap)
+- [Limitations](#limitations)
+- [Editor support](#editor-support)
+- [Troubleshooting](#troubleshooting)
+- [Update and uninstall](#update-and-uninstall)
+- [Build from source](#build-from-source)
+- [Contributing](#contributing)
 
 ---
 
-## Installation
+## Install
 
-Building from source takes a few seconds and always gives you the newest version. All you
-need is `git`, `make` and a C compiler (`gcc` or `clang`). After installing, the `neplang`
-command works from any folder, just like `python`.
+Pick your system and run one command. Nothing else is needed to run NepLang programs.
+
+### Windows
+
+Open **PowerShell** and run:
+
+```powershell
+irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex
+```
+
+This installs `neplang.exe` into `%LOCALAPPDATA%\Programs\neplang` and adds it to your
+`PATH`. **Close PowerShell and open a new window**, then check it:
+
+```powershell
+neplang --version
+```
+
+You can also download `neplang-windows-x86_64.exe` yourself from the
+[Releases page](https://github.com/charitraa/NepLang/releases/latest), rename it to
+`neplang.exe` and put it in any folder on your `PATH`.
+
+### Linux and macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh
+```
+
+This installs `neplang` into `~/.local/bin`. If `neplang --version` says
+"command not found", add that folder to your `PATH` (put this line in `~/.bashrc` or
+`~/.zshrc`, then open a new terminal):
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### Ubuntu / Debian (.deb) and Fedora (.rpm)
+
+Download the package for your system from the
+[Releases page](https://github.com/charitraa/NepLang/releases/latest) and install it with
+your package manager. It installs `neplang` for all users, plus the man page
+(`man neplang`) and the examples in `/usr/share/doc/neplang/examples/`.
+
+```bash
+sudo apt install ./neplang_*_amd64.deb          # Ubuntu / Debian / Linux Mint (arm64: *_arm64.deb)
+sudo dnf install ./neplang-*.x86_64.rpm         # Fedora / RHEL (arm64: *.aarch64.rpm)
+```
 
 ### Arch Linux / Manjaro / CachyOS
 
 ```bash
-sudo pacman -S --needed base-devel git
 git clone https://github.com/charitraa/NepLang.git neplang
 cd neplang/packaging/arch
 makepkg -si
 ```
 
-`makepkg -si` builds NepLang, runs its tests, and installs it as a normal pacman package
-(`neplang` in `/usr/bin`, plus the man page and examples in `/usr/share/doc/neplang/examples`).
-To update later: `git pull`, then run `makepkg -si` again in `packaging/arch`.
+### Optional: a C compiler for `neplang build`
 
-Or, without making a package:
+Running programs needs nothing else. Only `neplang build`, which turns a program into a
+standalone executable, also needs a C compiler:
 
-```bash
-cd neplang
-make
-sudo make install        # installs to /usr/local
-```
-
-### Ubuntu / Debian / Fedora / other Linux
-
-1. Install the tools:
-
-   ```bash
-   sudo apt install build-essential git        # Ubuntu / Debian / Linux Mint
-   sudo dnf install gcc make git               # Fedora
-   ```
-
-2. Download, build and install:
-
-   ```bash
-   git clone https://github.com/charitraa/NepLang.git neplang
-   cd neplang
-   make
-   sudo make install
-   ```
-
-   `sudo make install` puts `neplang` in `/usr/local/bin` and installs the man page
-   (`man neplang`). Without sudo, install into your home folder instead:
-
-   ```bash
-   make install PREFIX=$HOME/.local
-   ```
-
-   `~/.local/bin` must then be on your `PATH` (add `export PATH="$HOME/.local/bin:$PATH"`
-   to `~/.bashrc` or `~/.zshrc`).
-
-3. Check it:
-
-   ```bash
-   neplang --version
-   neplang examples/hello_calc.np
-   ```
-
-### Windows
-
-The easiest way is **MSYS2**, which gives you `gcc` and `make` and builds a normal Windows
-`neplang.exe`.
-
-1. Download and install MSYS2 from <https://www.msys2.org> (keep the default folder
-   `C:\msys64`).
-2. Open **MSYS2 UCRT64** from the Start menu and run:
-
-   ```bash
-   pacman -S --needed mingw-w64-ucrt-x86_64-gcc make git
-   git clone https://github.com/charitraa/NepLang.git neplang
-   cd neplang
-   make
-   ./bin/neplang examples/hello_calc.np
-   ```
-
-3. To use `neplang` from **PowerShell** or **cmd** in any folder, add two folders to your
-   `PATH`. Open PowerShell and run (change the first path if you cloned somewhere else; in
-   MSYS2 your home folder is `C:\msys64\home\<your name>`):
-
-   ```powershell
-   $neplang = "C:\msys64\home\$env:USERNAME\neplang\bin"
-   $gcc     = "C:\msys64\ucrt64\bin"
-   [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$neplang;$gcc", "User")
-   ```
-
-   Close and reopen PowerShell, then:
-
-   ```powershell
-   neplang --version
-   neplang hello.np
-   ```
-
-   (The `ucrt64\bin` folder provides the C compiler that `neplang build` uses.)
-
-**Already have gcc but no make?** Build from PowerShell or cmd in the `neplang` folder:
-
-```powershell
-mkdir bin
-gcc -std=c11 -O2 -o bin\neplang.exe src\lexer.c src\value.c src\ast.c src\parser.c src\modules.c src\classes.c src\checker.c src\interpreter.c src\rt.c src\ir.c src\vm.c src\cgen.c src\diagnostics.c src\main.c -lm
-bin\neplang.exe examples\hello_calc.np
-```
-
-**WSL** (Linux inside Windows) also works: run `wsl --install` in an Administrator
-PowerShell, restart, open **Ubuntu**, and follow the [Linux steps](#ubuntu--debian--fedora--other-linux).
-
-### macOS
-
-```bash
-xcode-select --install          # installs clang, make and git
-git clone https://github.com/charitraa/NepLang.git neplang
-cd neplang
-make
-sudo make install
-```
-
-### Prebuilt binaries
-
-Ready-made binaries are on the [Releases page](https://github.com/charitraa/NepLang/releases).
-They can be older than the code in the repository, so build from source to get the newest
-features.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh     # Linux / macOS
-```
-
-```powershell
-irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex          # Windows PowerShell
-```
-
-### Uninstall
-
-```bash
-sudo pacman -R neplang          # Arch, if installed with makepkg
-sudo make uninstall             # if installed with 'sudo make install' (run in the neplang folder)
-make uninstall PREFIX=$HOME/.local
-```
-
-On Windows, delete the `neplang` folder and remove it from your `PATH`.
+| System | Install |
+|---|---|
+| Windows | [MSYS2](https://www.msys2.org), then in **MSYS2 UCRT64**: `pacman -S mingw-w64-ucrt-x86_64-gcc`, and add `C:\msys64\ucrt64\bin` to your `PATH` |
+| Ubuntu / Debian | `sudo apt install gcc` |
+| Fedora | `sudo dnf install gcc` |
+| Arch | `sudo pacman -S gcc` |
+| macOS | `xcode-select --install` |
 
 ---
 
-## Running a program (like Python)
+## Quick start
 
-NepLang works like Python: write code in a file, then run the file.
-
-| Python | NepLang | Does |
-|---|---|---|
-| `python hello.py` | `neplang hello.np` | run a program |
-| `python` | `neplang` | interactive mode (REPL) |
-| `python hello.py a b` | `neplang hello.np a b` | pass arguments (read them with `os.args()`) |
-| | `neplang check hello.np` | only look for mistakes, don't run |
-| | `neplang build hello.np -o hello` | make a native program you can run as `./hello` |
-| `python --version` | `neplang --version` | show the version |
-
-NepLang files end in `.np`. Make a file `namaste.np` in any text editor:
+Make a file called `namaste.np` in any text editor:
 
 ```
 # my first NepLang program
+vana("Timro naam ke ho?")
 naam = padha()              # read a line you type
-vana("Namaste " + naam)
+vana("Namaste ${naam}!")
 ```
 
 Run it:
@@ -218,11 +132,12 @@ neplang namaste.np
 ```
 
 ```
+Timro naam ke ho?
 Sita
-Namaste Sita
+Namaste Sita!
 ```
 
-Or try code line by line in the REPL (type `exit` to leave):
+Or try code line by line in the REPL. Type `exit` (or press Ctrl-D) to leave:
 
 ```
 $ neplang
@@ -233,7 +148,65 @@ $ neplang
 Namaste
 ```
 
-Run the examples from the `neplang` folder, e.g. `neplang examples/types.np`.
+Next: read [Syntax at a glance](#syntax-at-a-glance), then try the
+[example programs](#example-programs).
+
+---
+
+## Running programs
+
+NepLang works like Python: write code in a file, then run the file.
+
+| Python | NepLang | Does |
+|---|---|---|
+| `python hello.py` | `neplang hello.np` | run a program |
+| `python` | `neplang` | interactive mode (REPL) |
+| `python hello.py a b` | `neplang hello.np a b` | pass arguments (read them with `os.args()`) |
+| | `neplang check hello.np` | only look for mistakes, don't run |
+| | `neplang build hello.np -o hello` | make a standalone program you run as `./hello` (`hello.exe` on Windows) |
+| `python --version` | `neplang --version` | show the version |
+| | `neplang --help` | list all commands |
+
+NepLang files end in `.np`.
+
+### The REPL
+
+Run `neplang` with no file to type code and see results right away. A bare expression is
+printed (unless it is `khali`), an open `{` continues on the next line, an error doesn't
+end the session, and a function can be redefined.
+
+```
+> x = 5
+> x * 2
+10
+> kaam sq(n) {
+...     farkau n * n
+... }
+> sq(x)
+25
+```
+
+### Other ways to run a program
+
+```bash
+neplang run prog.np [args...]    # same as: neplang prog.np
+neplang --vm prog.np             # run on the bytecode virtual machine
+neplang --emit-c prog.np         # print the C code that `build` compiles
+neplang --ir prog.np             # print the optimized intermediate code
+```
+
+Every way of running gives the same output and the same error messages. A program made
+with `neplang build` runs much faster: `fib(30)` takes 0.80 s in the interpreter, 0.52 s on
+the VM and 0.10 s as a native executable. `build` uses `cc` (`gcc` on Windows), or the
+compiler named in the `CC` environment variable.
+
+### Modules
+
+`import "helpers.np"` (or `import helpers`) brings another file's functions, classes and
+variables into your program. Files are looked up next to the importing file, then in each
+folder listed in `NEPLANG_PATH`. Each file loads once. The standard-library modules
+(`import math`, ...) always mean the built-in module; to import your own file with such a
+name, use quotes: `import "math.np"`.
 
 ---
 
@@ -314,7 +287,8 @@ Namaste, ma Sita hu, 22 barsa.
 
 ### Example programs
 
-Run any of these from the `neplang` folder, e.g. `neplang examples/types.np`:
+The [`examples/`](examples) folder has a program for each part of the language. Download
+one (or clone the repository) and run it, e.g. `neplang examples/types.np`:
 
 | File | Shows |
 |---|---|
@@ -327,7 +301,7 @@ Run any of these from the `neplang` folder, e.g. `neplang examples/types.np`:
 | `examples/classes.np` | Classes: fields, methods, `banau`, private `_` members |
 | `examples/types.np` | Types, `const`, floats, bools, `khali`, inheritance, interfaces, the standard library |
 
-After `makepkg -si` on Arch they are also in `/usr/share/doc/neplang/examples/`.
+The `.deb`, `.rpm` and Arch packages also install them in `/usr/share/doc/neplang/examples/`.
 
 ---
 
@@ -814,22 +788,115 @@ keywords either.
 
 ---
 
-## Current limitations
+## Limitations
 
-These parts of the original design are **not** available yet:
+NepLang does not have:
 
-- generic types (`array<int>`), dictionaries/maps, closures and functions as values
-- concurrency (`async`/`await`, threads, channels) and the `http`, `json`, `crypto` and
-  `database` modules
-- `neplang format`, `neplang test`, and Nepali error messages (`--lang=ne`)
-- `"${...}"` pieces can't contain a `"` (a string ends at the next quote); write `\${` for a literal `${`
-- `x += e` on an array item or field evaluates the target twice (`a[f()] += 1` calls `f` twice)
+- generic types (`array<int>`), dictionaries/maps, closures, or functions as values
+- threads or `async`/`await`
+- `http`, `json`, `crypto` or database modules
+
+Two things to watch out for:
+
+- A `"${...}"` piece can't contain a `"` (the string ends at the next quote). Write `\${`
+  for a literal `${`.
+- `x += e` on an array item or field evaluates the target twice (`a[f()] += 1` calls `f`
+  twice).
 
 Expressions may span lines after an operator, or inside `( )`, call arguments and `[ ]`.
 
 ---
 
-## Development
+## Editor support
+
+**VS Code**: the `editors/vscode` folder adds syntax highlighting and a file icon for
+`.np` files. Copy it into your VS Code extensions folder, then restart VS Code:
+
+```bash
+git clone https://github.com/charitraa/NepLang.git
+cp -r NepLang/editors/vscode ~/.vscode/extensions/neplang          # Linux / macOS
+```
+
+```powershell
+git clone https://github.com/charitraa/NepLang.git
+Copy-Item -Recurse NepLang\editors\vscode "$env:USERPROFILE\.vscode\extensions\neplang"   # Windows
+```
+
+---
+
+## Troubleshooting
+
+**`neplang` is not recognized / command not found**
+Open a new terminal window after installing; the old one doesn't see the new `PATH`. On
+Linux/macOS, check that `~/.local/bin` is on your `PATH` (see [Install](#install)).
+
+**Windows says "Windows protected your PC"**
+The `.exe` isn't signed yet, so SmartScreen may warn about a file downloaded with a
+browser. Click **More info**, then **Run anyway**. The PowerShell installer avoids this.
+
+**PowerShell says running scripts is disabled**
+The one-line installer doesn't save a script file, so this usually doesn't happen. If it
+does, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then try again.
+
+**`neplang build` says the C compiler failed**
+Install a C compiler (see [Optional: a C compiler](#optional-a-c-compiler-for-neplang-build))
+and open a new terminal. Running programs with `neplang file.np` doesn't need one.
+
+**Something else is wrong**
+Open an issue at <https://github.com/charitraa/NepLang/issues> with your system, the output
+of `neplang --version`, the program, and the full error message.
+
+---
+
+## Update and uninstall
+
+**Update**: run the same install command again; it always fetches the newest release. For
+`.deb`/`.rpm`, download the new package and install it the same way. To install one
+specific version, set `NEPLANG_VERSION` first (e.g. `NEPLANG_VERSION=v1.0.3`).
+
+**Uninstall**:
+
+| Installed with | Remove with |
+|---|---|
+| Windows installer | Delete `%LOCALAPPDATA%\Programs\neplang` and remove it from your user `PATH` (Settings → "Edit environment variables for your account") |
+| Linux / macOS installer | `rm ~/.local/bin/neplang` |
+| `.deb` | `sudo apt remove neplang` |
+| `.rpm` | `sudo dnf remove neplang` |
+| Arch `makepkg -si` | `sudo pacman -R neplang` |
+| `sudo make install` | `sudo make uninstall` (in the source folder) |
+
+---
+
+## Build from source
+
+You only need this to work on NepLang itself or to run a version that isn't released
+yet. You need `git`, `make` and a C compiler (`gcc` or `clang`).
+
+**Linux / macOS**
+
+```bash
+sudo apt install build-essential git      # Ubuntu / Debian (Fedora: sudo dnf install gcc make git)
+                                          # macOS: xcode-select --install
+git clone https://github.com/charitraa/NepLang.git neplang
+cd neplang
+make
+sudo make install                         # or, without sudo: make install PREFIX=$HOME/.local
+```
+
+**Windows**: install [MSYS2](https://www.msys2.org), open **MSYS2 UCRT64** and run:
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-gcc make git
+git clone https://github.com/charitraa/NepLang.git neplang
+cd neplang
+make
+./bin/neplang examples/hello_calc.np
+```
+
+Then add `C:\msys64\home\<your name>\neplang\bin` and `C:\msys64\ucrt64\bin` to your
+`PATH` to use `neplang` from PowerShell or cmd.
+
+### Development commands
 
 ```bash
 make          # build bin/neplang
@@ -876,109 +943,39 @@ source.np → Lexer → Parser → AST → imports → classes → checker ─�
 | `src/value.c` / `value.h` | Runtime values |
 | `src/diagnostics.c` | Shared error reporter (file, line, column, caret) |
 | `src/main.c` | Command line, REPL, and the pipeline |
+| `tools/embed_runtime.c` | Build step that puts the runtime into `neplang`, so `build` works anywhere |
 
-### Releasing prebuilt binaries
-
-`.github/workflows/release.yml` builds static binaries for Linux (x86_64, arm64),
-macOS (universal) and Windows (x86_64). It runs the test suite on each platform and
-attaches the binaries, plus a `SHA256SUMS` file, to a GitHub Release. To publish a
-release, push a version tag:
-
-```bash
-git tag v0.5.0
-git push origin v0.5.0
-```
-
-`install.sh` and `install.ps1` always download from the **latest** release. To install a
-specific version, set `NEPLANG_VERSION=v0.5.0` first.
-
----
-
-## Project layout
+### Project layout
 
 ```
-src/          lexer, parser, AST, interpreter, diagnostics, main
-tests/        per-milestone test cases (input + expected output)
+src/          compiler, interpreter, VM, runtime
+tests/        test programs and their expected output
 examples/     example .np programs
-docs/         language design notes
-Makefile      build commands
+editors/      VS Code syntax highlighting
+docs/         man page and design notes
+packaging/    .deb/.rpm, Arch, Homebrew, Scoop and winget packaging
+tools/        build helpers
 install.sh    one-line installer for Linux / macOS
 install.ps1   one-line installer for Windows
 .github/      release workflow (builds the prebuilt binaries)
 ```
 
----
+### Releasing
 
-## Roadmap
+`.github/workflows/release.yml` builds Linux (x86_64, arm64), macOS (universal) and
+Windows (x86_64) binaries plus `.deb`/`.rpm` packages, runs the tests on each platform,
+and publishes them with a `SHA256SUMS` file as a GitHub Release. To release:
 
-1. ✅ Calculator: integer arithmetic
-2. ✅ Variables
-3. ✅ Conditionals: `yedi` / `natara`
-4. ✅ Loops: `jabasamma`, `ko_lagi`
-5. ✅ Functions: `kaam` / `farkau`
-6. ✅ Arrays
-7. ✅ Strings
-8. ✅ Structs / classes
-9. ✅ Symbol table (hashed, scoped)
-10. ✅ Static checker (type inference: undefined names, argument counts, impossible operations)
-11. ✅ Modules (`import`)
-12. ✅ Bytecode VM (`--vm`)
-13. ✅ Intermediate representation (`--ir`, with constant folding and dead-code removal)
-14. ✅ Native code generation (`--emit-c`, `--build`: NepLang → C → executable)
-15. ✅ Type system: `int float bool string array object any`, `?` nullable, class types, `void`, `const`
-16. ✅ Inheritance, interfaces and `super`
-17. ✅ Standard library (`math string array io time os`) and methods on arrays and strings
-18. ✅ REPL and `run` / `check` / `build` commands
-
-### Ways to run a program
-
-```bash
-neplang                          # interactive REPL
-neplang prog.np [args...]        # tree-walking interpreter (or: neplang run prog.np)
-neplang check prog.np            # report errors without running
-neplang build prog.np -o prog    # native executable (same as --build)
-neplang --vm prog.np             # compile to bytecode, run on the virtual machine
-neplang --ir prog.np             # print the optimized intermediate representation
-neplang --emit-c prog.np         # print the generated C source
-neplang --build prog.np -o prog  # native executable (needs a C compiler: cc, or $CC)
-```
-
-All execution paths share one runtime (`src/rt.c`) so they print identical output and
-identical error messages, every feature included (native programs report runtime errors without the
-source line). The runtime sources are built into the `neplang` binary, so `--build`
-only needs a C compiler (even with a downloaded prebuilt binary); set `NEPLANG_RUNTIME` to a
-runtime folder (e.g. the checkout's `src/`) to use those files instead. Native speed on
-`fib(30)`: interpreter 0.80 s, VM 0.52 s, native 0.10 s.
-
-### Modules
-
-`import "helpers.np"` (or `import helpers`, same as `import "helpers.np"`) splices another
-file's functions, classes and variables into the program. Files are looked up next to the
-importing file, then in each directory of `NEPLANG_PATH`; each file loads once, cycles are
-harmless. The names of the standard-library modules (`import math`, ...) always mean the
-built-in module; import a file with such a name with quotes: `import "math.np"`.
-
-### The REPL
-
-Run `neplang` with no file to type code and see results right away. A bare expression is
-printed (unless it is `khali`); an open `{` continues on the next line; an error doesn't end
-the session; a function can be redefined. Type `exit` or press Ctrl-D to leave.
-
-```
-> x = 5
-> x * 2
-10
-> kaam sq(n) {
-...     farkau n * n
-... }
-> sq(x)
-25
-```
+1. Bump `NEPLANG_VERSION` in `src/main.c` (and `pkgver` in `packaging/arch/PKGBUILD`).
+2. Optional trial run, which builds everything without publishing:
+   `gh workflow run release.yml --ref main`
+3. Commit, push, then push a tag: `git tag -a v1.0.4 -m "NepLang 1.0.4" && git push origin v1.0.4`
 
 ---
 
 ## Contributing
 
-Work on NepLang goes one milestone at a time. Please keep each change to the current
-milestone, add tests for any new feature (including at least one `.error.np` case), and
-make sure `make test` passes with no compiler warnings.
+Bug reports, ideas and pull requests are welcome at
+<https://github.com/charitraa/NepLang/issues>. For code changes: add tests for any new
+feature (including at least one `.error.np` case), and make sure `make test` passes with
+no compiler warnings.
