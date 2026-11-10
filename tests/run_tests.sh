@@ -72,7 +72,8 @@ trap 'rm -rf "$TMPDIR_CLI"' EXIT
 printf 'import os\nvana(os.args())\n' > "$TMPDIR_CLI/args.np"
 cli_check "program arguments" '["a", "b c"]' "$("$BIN" "$TMPDIR_CLI/args.np" a "b c" 2>&1)"
 cli_check "run subcommand" '["x"]' "$("$BIN" run "$TMPDIR_CLI/args.np" x 2>&1)"
-cli_check "check subcommand" "$TMPDIR_CLI/args.np: no errors found." "$("$BIN" check "$TMPDIR_CLI/args.np" 2>&1)"
+# relative path: on Windows (MSYS2) an absolute /tmp path reaches neplang rewritten as D:/...
+cli_check "check subcommand" "args.np: no errors found." "$(cd "$TMPDIR_CLI" && "$OLDPWD/$BIN" check args.np 2>&1)"
 "$BIN" check tests/types/int_gets_string.error.np >/dev/null 2>&1
 cli_check "check reports errors" "1" "$?"
 

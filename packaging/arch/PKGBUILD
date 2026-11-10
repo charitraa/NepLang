@@ -2,7 +2,7 @@
 # Usage (from this folder):   makepkg -si
 # Remove again:               sudo pacman -R neplang
 pkgname=neplang
-pkgver=1.0.1
+pkgver=1.0.2
 pkgrel=1
 pkgdesc="NepLang: a programming language with romanized Nepali keywords"
 arch=('x86_64' 'aarch64')
