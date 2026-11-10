@@ -43,10 +43,13 @@ for backend in vm native; do
         else
             expected="${file%.np}.expected"
             [ -f "$expected" ] || continue
-            if diff <(run_one "$backend" "$file") "$expected" >/dev/null; then
+            # compared as strings, like run_tests.sh (no process substitution: fragile on MSYS2)
+            actual=$(run_one "$backend" "$file")
+            want=$(cat "$expected")
+            if [ "$actual" == "$want" ]; then
                 pass=$((pass + 1))
             else
-                echo "FAIL  $file"; fail=$((fail + 1))
+                echo "FAIL  $file  (expected '${want:0:200}', got '${actual:0:200}')"; fail=$((fail + 1))
             fi
         fi
     done
