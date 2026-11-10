@@ -1,3 +1,9 @@
+neplang (1.0.3) noble; urgency=medium
+
+  * First public release with prebuilt Windows, Linux and macOS binaries.
+
+ -- Charitra Shrestha <stharabi9862187405@gmail.com>  Tue, 10 Nov 2026 18:35:15 +0545
+
 neplang (1.0.2) noble; urgency=medium
 
   * First public release with prebuilt Windows, Linux and macOS binaries.
