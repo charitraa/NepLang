@@ -44,9 +44,11 @@ Without the secret, the `homebrew-scoop` job still renders the files but skips t
 2. Make a GPG key (`gpg --full-generate-key`), upload it
    (`gpg --keyserver keyserver.ubuntu.com --send-keys KEYID`) and add its fingerprint to
    your Launchpad profile.
-3. Install the tools: `sudo apt install devscripts debhelper dput`.
-4. For each release: add the version to `debian/changelog`, then run
-   `packaging/ppa/upload.sh VERSION`. Launchpad builds it for each Ubuntu release.
+3. For each release: add the version to `debian/changelog`, commit it, then run
+   `packaging/ppa/upload-docker.sh VERSION` (any OS with Docker; it runs `upload.sh` in an
+   Ubuntu container and asks for your GPG passphrase), or on Ubuntu itself install
+   `devscripts debhelper dput` and run `packaging/ppa/upload.sh VERSION`.
+   Launchpad builds it for each Ubuntu release (26.04, 24.04 and 22.04 by default).
 
 ## Arch
 
