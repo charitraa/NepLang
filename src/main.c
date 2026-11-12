@@ -14,7 +14,7 @@
 #include "interpreter.h"
 #include "rt.h"
 
-#define NEPLANG_VERSION "1.0.3"
+#define NEPLANG_VERSION "1.0.4"
 
 static int has_np_extension(const char *path) {
     size_t len = strlen(path);

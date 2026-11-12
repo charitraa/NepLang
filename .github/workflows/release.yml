@@ -158,8 +158,21 @@ jobs:
     env:
       WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
     steps:
+      # winget-releaser can only update a package that is already in winget; until the first
+      # version is merged (microsoft/winget-pkgs), skip instead of failing the release.
+      - name: Check NepLang is already in winget
+        id: exists
+        shell: bash
+        run: |
+          if curl -fsS -o /dev/null -H "Authorization: Bearer ${{ github.token }}" \
+              https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/c/charitraa/NepLang; then
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "charitraa.NepLang is not in winget yet; skipping the update."
+          fi
+
       - uses: vedantmgoyal9/winget-releaser@v2
-        if: env.WINGET_TOKEN != ''
+        if: env.WINGET_TOKEN != '' && steps.exists.outputs.yes == 'true'
         with:
           identifier: charitraa.NepLang
           installers-regex: 'windows-x86_64\.exe$'
