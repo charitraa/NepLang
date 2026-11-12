@@ -1,0 +1,19 @@
+# "${...}" turns any value into text, the same way vana prints it
+ank = [72, 45, 91]
+vana("ank: ${ank}")
+vana("nested: ${[[1, 2], [3]]}")
+vana("bool: ${sacho}, khali: ${khali}, float: ${2.5}, int: ${3 + 4}")
+naam = "Sita"
+vana("naam: ${naam}!")
+class Bindu {
+    int x = 1
+    int y = 2
+    kaam string() string {
+        farkau "method"
+    }
+    kaam dekhau() {
+        vana("yo: ${yo}, x: ${x}")
+    }
+}
+Bindu().dekhau()
+vana("${lambai(ank)} items")

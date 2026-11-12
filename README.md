@@ -545,7 +545,8 @@ ko_lagi akshar in "abc" {
 - When an array is printed, the strings inside it are shown with quotes:
   `vana(["a", 1])` prints `["a", 1]`.
 - `"ab" * 3` repeats a string: `ababab`.
-- `"Mero naam ${naam} ho"` puts the value of an expression into the text.
+- `"Mero naam ${naam} ho"` puts the value of an expression into the text. Any value works
+  and looks the way `vana` prints it: `"${[1, 2]}"` is `[1, 2]`, `"${sacho}"` is `sacho`.
 
 Strings have methods too: `"namaste".upper()` is `NAMASTE`.
 

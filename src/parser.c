@@ -223,9 +223,23 @@ static AstNode *parse_interpolation(Parser *parser, Token literal, const char *f
     return expr;
 }
 
+/* Wraps an interpolated expression in a call to the builtin string(), so "${x}" turns any
+ * value (array, bool, khali, object) into text the same way vana prints it -- '+' alone only
+ * converts numbers. Builtins are resolved before methods of 'yo', so this can't be shadowed.
+ * The name token's text is a static "string" (it is only compared by name, never printed). */
+static AstNode *interpolation_to_string(Token literal, AstNode *expr) {
+    Token name = literal;
+    name.type = TOKEN_IDENT;
+    name.start = "string";
+    name.length = 6;
+    AstNode *call = ast_new_call(name);
+    ast_call_add_arg(call, expr);
+    return call;
+}
+
 /* Decodes the escapes in a string literal token. The lexer has already checked them.
- * "${expr}" pieces are turned into '"text" + (expr) + "text"' -- the leading string makes
- * '+' join them as text. */
+ * "${expr}" pieces are turned into '"text" + string(expr) + "text"' (see
+ * interpolation_to_string). */
 static AstNode *parse_string(Parser *parser) {
     Token literal = parser->current;
     advance(parser);
@@ -257,7 +271,7 @@ static AstNode *parse_string(Parser *parser) {
             }
             AstNode *piece = ast_new_string(literal, chars, length);
             result = result ? ast_new_binop(plus, result, piece) : piece;
-            AstNode *expr = parse_interpolation(parser, literal, from, close);
+            AstNode *expr = interpolation_to_string(literal, parse_interpolation(parser, literal, from, close));
             result = ast_new_binop(plus, result, expr);
             chars = checked_malloc((size_t)text_length + 1);
             length = 0;
