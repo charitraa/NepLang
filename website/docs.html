@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NepLang Docs</title>
+<meta name="description" content="The NepLang language guide: syntax, types, functions, arrays, strings, classes and the standard library.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Mukta:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/neplang.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+</head>
+<body>
+<a class="skip" href="#doc">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 22 28" aria-hidden="true"><polygon points="1.5,1.5 20,13 8,13 20,26.5 1.5,26.5" fill="#dc143c" stroke="#003893" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      NepLang
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="./">Home</a>
+      <a href="playground.html">Playground</a>
+      <a href="docs.html" aria-current="page">Docs</a>
+      <a href="download.html">Download</a>
+      <a href="https://github.com/charitraa/NepLang">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme"></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap docs" id="main">
+  <nav aria-label="On this page" id="toc"></nav>
+  <article id="doc">
+    <h1>Documentation</h1>
+    <p>Loading the guide…</p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>NepLang is free and open source under the MIT license.</span>
+    <span><a href="https://github.com/charitraa/NepLang">Source code</a> &nbsp; <a href="https://github.com/charitraa/NepLang/issues">Report a problem</a> &nbsp; <a href="https://github.com/charitraa/NepLang/releases">Releases</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // The guide is the README's language sections, so the website and README never disagree.
+  const FROM = '## Running programs';
+  const UNTIL = '## Editor support';
+  const doc = document.getElementById('doc');
+  const toc = document.getElementById('toc');
+
+  const slug = (t) => t.toLowerCase().replace(/[`'"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const isNepLang = (code) => /\b(vana|kaam|yedi|jabasamma|ko_lagi|class|import|farkau|interface)\b/.test(code) || /^\s*[A-Za-z_]\w*\s*=\s*\S/m.test(code);
+
+  function local() { return fetch('README.md').then((r) => { if (!r.ok) throw 0; return r.text(); }); }
+  function remote() { return fetch('https://raw.githubusercontent.com/charitraa/NepLang/main/README.md').then((r) => r.text()); }
+
+  local().catch(remote).then((md) => {
+    const a = md.indexOf(FROM), b = md.indexOf(UNTIL);
+    const part = md.slice(a < 0 ? 0 : a, b < 0 ? undefined : b);
+    doc.innerHTML = '<h1>Documentation</h1>' + marked.parse(part);
+
+    // headings get ids and a table of contents
+    const ul = document.createElement('ul');
+    doc.querySelectorAll('h2, h3').forEach((h) => {
+      h.id = slug(h.textContent);
+      const li = document.createElement('li');
+      if (h.tagName === 'H3') li.className = 'sub';
+      const link = document.createElement('a');
+      link.href = '#' + h.id;
+      link.textContent = h.textContent;
+      li.appendChild(link);
+      ul.appendChild(li);
+    });
+    toc.appendChild(ul);
+
+    // links inside the README that point at repo files go to GitHub
+    doc.querySelectorAll('a[href]').forEach((link) => {
+      const href = link.getAttribute('href');
+      if (href.startsWith('#')) link.setAttribute('href', '#' + slug(href.slice(1)));
+      else if (!/^[a-z]+:/.test(href)) link.href = 'https://github.com/charitraa/NepLang/blob/main/' + href;
+    });
+
+    // NepLang code blocks: highlighted, with a Try button that opens the playground
+    doc.querySelectorAll('pre > code').forEach((code) => {
+      if (/language-/.test(code.className)) return;   // bash, powershell, ...
+      const text = code.textContent;
+      const transcript = /^(\$ |> )/m.test(text) || /^Error in /m.test(text);
+      if (!isNepLang(text) && !transcript) return;
+      code.innerHTML = NepLang.highlight(text);
+      if (transcript || !isNepLang(text)) return;
+      const btn = document.createElement('a');
+      btn.className = 'try-btn';
+      btn.href = 'playground.html#code=' + NepLang.encodeCode(text.replace(/\n$/, ''));
+      btn.textContent = 'Try it';
+      btn.setAttribute('aria-label', 'Try this example in the playground');
+      code.parentElement.appendChild(btn);
+    });
+
+    if (location.hash) {
+      const target = document.getElementById(location.hash.slice(1));
+      if (target) target.scrollIntoView();
+    }
+  }).catch(() => {
+    doc.innerHTML = '<h1>Documentation</h1><p>The guide could not be loaded. Read it on <a href="https://github.com/charitraa/NepLang#readme">GitHub</a>.</p>';
+  });
+})();
+</script>
+</body>
+</html>

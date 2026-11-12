@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NepLang Playground</title>
+<meta name="description" content="Write and run NepLang programs in your browser. No install needed.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Mukta:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/neplang.js"></script>
+</head>
+<body>
+<a class="skip" href="#code">Skip to the editor</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 22 28" aria-hidden="true"><polygon points="1.5,1.5 20,13 8,13 20,26.5 1.5,26.5" fill="#dc143c" stroke="#003893" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      NepLang
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="./">Home</a>
+      <a href="playground.html" aria-current="page">Playground</a>
+      <a href="docs.html">Docs</a>
+      <a href="download.html">Download</a>
+      <a href="https://github.com/charitraa/NepLang">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme"></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap pg" id="main">
+  <h1 class="skip">NepLang playground</h1>
+  <div class="toolbar">
+    <button class="btn run" id="run" type="button">Run</button>
+    <div class="seg" role="radiogroup" aria-label="What Run does">
+      <label><input type="radio" name="mode" value="run" checked><span>Run</span></label>
+      <label><input type="radio" name="mode" value="check"><span>Check only</span></label>
+      <label><input type="radio" name="mode" value="vm"><span>Run on VM</span></label>
+      <label><input type="radio" name="mode" value="c"><span>Show C</span></label>
+    </div>
+    <label class="kbd-hint" for="examples">Example</label>
+    <select id="examples">
+      <option value="">Choose an example</option>
+    </select>
+    <span class="spacer"></span>
+    <button class="btn secondary small" id="share" type="button">Copy share link</button>
+    <button class="btn secondary small" id="download-file" type="button">Download .np</button>
+  </div>
+
+  <div id="code" tabindex="-1"></div>
+
+  <div class="side">
+    <div>
+      <h2 id="out-h">Output</h2>
+      <span class="status" id="status" aria-live="polite"></span>
+    </div>
+    <pre class="output" id="output" aria-labelledby="out-h" aria-live="polite"></pre>
+    <div>
+      <h2><label for="stdin">Input for <code>padha()</code>, one line per call</label></h2>
+      <textarea class="stdin" id="stdin" spellcheck="false" placeholder="Sita"></textarea>
+      <p class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> runs the program. Programs stop after 5 seconds.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const EXAMPLES = [
+    ['basics.np', 'Basics: variables, printing, input'],
+    ['hello_calc.np', 'Arithmetic and precedence'],
+    ['variables.np', 'Simple interest'],
+    ['control_flow.np', 'yedi, jabasamma, ko_lagi'],
+    ['functions.np', 'Functions and recursion'],
+    ['arrays.np', 'Arrays and a 2D matrix'],
+    ['strings.np', 'Strings and characters'],
+    ['classes.np', 'Classes, banau, private members'],
+    ['types.np', 'Types, inheritance, interfaces'],
+  ];
+  const START = [
+    '# Welcome to the NepLang playground.',
+    '# Write code here and press Run (or Ctrl + Enter).',
+    '',
+    'vana("Timro naam ke ho?")',
+    'naam = padha()',
+    'yedi naam == "" {',
+    '    naam = "sathi"',
+    '}',
+    'vana("Namaste, ${naam}!")',
+    '',
+    'ank = [72, 45, 91, 60]',
+    'vana("Ank: ${ank}")',
+    'vana("Sabai bhanda thulo: ${ank.max()}")',
+  ].join('\n');
+  const DRAFT_KEY = 'neplang-playground-draft';
+
+  const out = document.getElementById('output');
+  const status = document.getElementById('status');
+  const runBtn = document.getElementById('run');
+  const stdin = document.getElementById('stdin');
+  const select = document.getElementById('examples');
+
+  let initial = START;
+  const m = /#code=([A-Za-z0-9_-]+)/.exec(location.hash);
+  const shared = m && NepLang.decodeCode(m[1]);
+  if (shared !== null && shared !== undefined && m) initial = shared;
+  else { try { initial = localStorage.getItem(DRAFT_KEY) || START; } catch (e) { /* ignore */ } }
+  if (!m) stdin.value = 'Sita';
+
+  const editor = NepLang.createEditor(document.getElementById('code'), initial, go);
+  editor.textarea.addEventListener('input', () => {
+    try { localStorage.setItem(DRAFT_KEY, editor.value); } catch (e) { /* ignore */ }
+  });
+
+  function mode() { return document.querySelector('input[name="mode"]:checked').value; }
+  function syncButton() {
+    runBtn.textContent = { run: 'Run', check: 'Check', vm: 'Run', c: 'Show C' }[mode()];
+  }
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', syncButton));
+
+  async function go() {
+    const md = mode();
+    runBtn.disabled = true;
+    status.textContent = md === 'check' ? 'Checking…' : 'Running…';
+    out.textContent = '';
+    const t0 = performance.now();
+    const r = await NepLang.run({ code: editor.value, mode: md, input: stdin.value }, NepLang.outputWriter(out), 5000);
+    NepLang.describeEnd(out, r, md);
+    const ms = Math.round(performance.now() - t0);
+    status.textContent = r.timedOut ? 'Stopped.' : (r.status === 0 ? 'Finished in ' + ms + ' ms.' : 'Finished with an error.');
+    runBtn.disabled = false;
+    syncButton();
+  }
+  runBtn.addEventListener('click', go);
+
+  for (const [file, title] of EXAMPLES) {
+    const o = document.createElement('option');
+    o.value = file;
+    o.textContent = title;
+    select.appendChild(o);
+  }
+  select.addEventListener('change', async () => {
+    if (!select.value) return;
+    try {
+      const res = await fetch('examples/' + select.value);
+      if (!res.ok) throw new Error(res.status);
+      editor.value = await res.text();
+      out.textContent = '';
+      status.textContent = 'Loaded ' + select.value + '. Press Run.';
+    } catch (e) {
+      status.textContent = 'Could not load ' + select.value + '.';
+    }
+    select.value = '';
+    editor.focus();
+  });
+
+  document.getElementById('share').addEventListener('click', async (e) => {
+    const url = location.origin + location.pathname + '#code=' + NepLang.encodeCode(editor.value);
+    history.replaceState(null, '', url);
+    try { await navigator.clipboard.writeText(url); e.target.textContent = 'Link copied'; }
+    catch (err) { e.target.textContent = 'Link is in the address bar'; }
+    setTimeout(() => { e.target.textContent = 'Copy share link'; }, 1800);
+  });
+
+  document.getElementById('download-file').addEventListener('click', () => {
+    const blob = new Blob([editor.value], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'program.np';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+})();
+</script>
+</body>
+</html>

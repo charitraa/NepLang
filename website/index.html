@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NepLang</title>
+<meta name="description" content="NepLang is a programming language with romanized Nepali keywords. Try it in your browser, then install it on Windows, macOS or Linux.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Mukta:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/neplang.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 22 28" aria-hidden="true"><polygon points="1.5,1.5 20,13 8,13 20,26.5 1.5,26.5" fill="#dc143c" stroke="#003893" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      NepLang
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="./" aria-current="page">Home</a>
+      <a href="playground.html">Playground</a>
+      <a href="docs.html">Docs</a>
+      <a href="download.html">Download</a>
+      <a href="https://github.com/charitraa/NepLang">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme"></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Programming in the words you already speak.</h1>
+        <p class="lead">NepLang is a programming language with Nepali keywords. Write <code>vana</code> to print, <code>yedi</code> for if, <code>kaam</code> for a function.</p>
+        <div class="hero-actions">
+          <a class="btn" href="download.html">Install NepLang</a>
+          <a class="btn secondary" href="playground.html">Open the playground</a>
+        </div>
+        <ul class="keywords" aria-label="NepLang keywords and their English meaning">
+          <li style="--i:0"><span class="np">vana</span><span class="en">print</span></li>
+          <li style="--i:1"><span class="np">yedi</span><span class="en">if</span></li>
+          <li style="--i:2"><span class="np">natara</span><span class="en">else</span></li>
+          <li style="--i:3"><span class="np">jabasamma</span><span class="en">while</span></li>
+          <li style="--i:4"><span class="np">ko_lagi</span><span class="en">for</span></li>
+          <li style="--i:5"><span class="np">kaam</span><span class="en">function</span></li>
+          <li style="--i:6"><span class="np">farkau</span><span class="en">return</span></li>
+          <li style="--i:7"><span class="np">sacho</span><span class="en">true</span></li>
+          <li style="--i:8"><span class="np">jutho</span><span class="en">false</span></li>
+          <li style="--i:9"><span class="np">padha</span><span class="en">read input</span></li>
+        </ul>
+      </div>
+      <div class="try">
+        <div id="hero-editor" style="--editor-h: 23.5rem"></div>
+        <div class="bar">
+          <button class="btn run" id="hero-run" type="button">Run</button>
+          <span class="hint">Edit the code and run it. <kbd>Ctrl</kbd> + <kbd>Enter</kbd> works too.</span>
+        </div>
+        <pre class="output" id="hero-output" aria-live="polite"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="python-h">
+    <div class="wrap">
+      <h2 id="python-h">If you know Python, you already know most of it</h2>
+      <p>Files end in <code>.np</code> and run like Python files: <code>neplang hello.np</code>. Blocks use <code>{ }</code> instead of indentation.</p>
+      <div style="overflow-x:auto">
+        <table class="compare">
+          <thead><tr><th scope="col">What</th><th scope="col">Python</th><th scope="col">NepLang</th></tr></thead>
+          <tbody>
+            <tr><td>Print</td><td><code>print(x)</code></td><td><code>vana(x)</code></td></tr>
+            <tr><td>If / else</td><td><code>if a &gt; b:</code> … <code>else:</code></td><td><code>yedi a &gt; b { } natara { }</code></td></tr>
+            <tr><td>While</td><td><code>while i &lt; 10:</code></td><td><code>jabasamma i &lt; 10 { }</code></td></tr>
+            <tr><td>For</td><td><code>for i in range(0, 10):</code></td><td><code>ko_lagi i in 0..10 { }</code></td></tr>
+            <tr><td>Function</td><td><code>def add(a, b): return a + b</code></td><td><code>kaam add(a, b) { farkau a + b }</code></td></tr>
+            <tr><td>True / False / None</td><td><code>True False None</code></td><td><code>sacho jutho khali</code></td></tr>
+            <tr><td>And / or / not</td><td><code>and or not</code></td><td><code>ra wa hoina</code></td></tr>
+            <tr><td>Input</td><td><code>input()</code></td><td><code>padha()</code></td></tr>
+            <tr><td>f-string</td><td><code>f"Hi {naam}"</code></td><td><code>"Hi ${naam}"</code></td></tr>
+            <tr><td>Class</td><td><code>class Dog(Animal):</code></td><td><code>class Kukur(Janawar) { }</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:1.25rem"><a href="docs.html">Read the language guide</a></p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="what-h">
+    <div class="wrap">
+      <h2 id="what-h">A small language with real tools</h2>
+      <div class="facts">
+        <div>
+          <h3>Errors you can understand</h3>
+          <p>Every error names the line, points at the exact spot, and says how to fix it: <q>Did you mean 'umar'?</q></p>
+        </div>
+        <div>
+          <h3>Checked before it runs</h3>
+          <p><code>neplang check</code> finds undefined names, wrong argument counts and type mistakes without running anything.</p>
+        </div>
+        <div>
+          <h3>Classes and types</h3>
+          <p>Classes, inheritance, interfaces, typed variables like <code>int umar = 22</code>, and a standard library for math, text, arrays and files.</p>
+        </div>
+        <div>
+          <h3>From script to program</h3>
+          <p>Run a file directly, try lines in the REPL, or turn a program into a fast native executable with <code>neplang build</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="install-h">
+    <div class="wrap">
+      <h2 id="install-h">Install in one line</h2>
+      <p id="install-for">Windows, macOS and Linux are all supported. Nothing else is needed to run programs.</p>
+      <div id="install-cmd" class="cmd"><pre>irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex</pre></div>
+      <p><a href="download.html">All downloads and package managers</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>NepLang is free and open source under the MIT license.</span>
+    <span><a href="https://github.com/charitraa/NepLang">Source code</a> &nbsp; <a href="https://github.com/charitraa/NepLang/issues">Report a problem</a> &nbsp; <a href="https://github.com/charitraa/NepLang/releases">Releases</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const SAMPLE = [
+    '# Change the name, then press Run',
+    'naam = "Sita"',
+    'vana("Namaste, ${naam}!")',
+    '',
+    'kaam factorial(n) {',
+    '    yedi n <= 1 {',
+    '        farkau 1',
+    '    }',
+    '    farkau n * factorial(n - 1)',
+    '}',
+    '',
+    'ko_lagi i in 1..6 {',
+    '    vana("${i}! = ${factorial(i)}")',
+    '}',
+  ].join('\n');
+
+  const out = document.getElementById('hero-output');
+  const btn = document.getElementById('hero-run');
+  const editor = NepLang.createEditor(document.getElementById('hero-editor'), SAMPLE, go);
+
+  async function go() {
+    btn.disabled = true;
+    btn.textContent = 'Running';
+    out.textContent = '';
+    const r = await NepLang.run({ code: editor.value, mode: 'run', input: '' }, NepLang.outputWriter(out), 5000);
+    NepLang.describeEnd(out, r, 'run');
+    btn.disabled = false;
+    btn.textContent = 'Run';
+  }
+  btn.addEventListener('click', go);
+
+  const os = NepLang.detectOS();
+  const cmds = {
+    windows: ['On Windows, open PowerShell and run:', 'irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex'],
+    macos: ['On macOS, open Terminal and run:', 'curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh'],
+    linux: ['On Linux, open a terminal and run:', 'curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh'],
+  };
+  document.getElementById('install-for').textContent = cmds[os][0];
+  document.querySelector('#install-cmd pre').textContent = cmds[os][1];
+})();
+</script>
+</body>
+</html>

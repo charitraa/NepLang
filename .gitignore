@@ -39,3 +39,7 @@ test.np
 # Release packaging scratch (see .github/workflows/release.yml)
 package/
 CLAUDE.md
+# Website build output (made by make wasm / the website workflow)
+website/wasm/
+website/examples/
+website/README.md

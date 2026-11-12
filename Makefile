@@ -11,7 +11,7 @@ RUNTIME_FILES = src/value.c src/value.h src/rt.c src/rt.h src/diagnostics.c src/
 EMBED_ORDER = src/token.h src/ast.h src/value.h src/diagnostics.h src/rt.h src/value.c src/rt.c src/diagnostics.c
 EMBED = bin/runtime_embed.c
 
-.PHONY: all debug test test-native test-all clean install uninstall
+.PHONY: all debug test test-native test-all clean install uninstall wasm
 
 all: $(BIN)
 
@@ -43,6 +43,16 @@ test-all: test test-native
 
 clean:
 	rm -rf bin
+
+# The website playground: the same interpreter compiled to WebAssembly with Emscripten (emcc).
+# Programs run in a Web Worker; each run makes a fresh module instance (callMain once).
+WASM_OUT = website/wasm
+wasm:
+	mkdir -p $(WASM_OUT)
+	emcc -std=c11 -O2 -o $(WASM_OUT)/neplang.js $(SRC) -lm \
+		-sMODULARIZE=1 -sEXPORT_NAME=createNepLang -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 \
+		-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=8MB -sFORCE_FILESYSTEM=1 \
+		-sENVIRONMENT=worker -sEXPORTED_RUNTIME_METHODS=callMain,FS
 
 # The installed binary looks for the runtime sources (needed by --build) in share/neplang/runtime.
 install:

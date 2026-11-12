@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download NepLang</title>
+<meta name="description" content="Install NepLang on Windows, macOS or Linux: one-line installers, winget, Scoop, Homebrew, .deb and .rpm packages.">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Mukta:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/neplang.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 22 28" aria-hidden="true"><polygon points="1.5,1.5 20,13 8,13 20,26.5 1.5,26.5" fill="#dc143c" stroke="#003893" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      NepLang
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="./">Home</a>
+      <a href="playground.html">Playground</a>
+      <a href="docs.html">Docs</a>
+      <a href="download.html" aria-current="page">Download</a>
+      <a href="https://github.com/charitraa/NepLang">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme"></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <div class="page-head">
+    <h1>Download NepLang</h1>
+    <p class="release-meta" id="release-meta">The latest release, for Windows, macOS and Linux.</p>
+  </div>
+
+  <div class="primary-install" id="primary">
+    <h2 id="primary-title">Windows</h2>
+    <p id="primary-text">Open PowerShell and run:</p>
+    <div class="cmd"><pre id="primary-cmd">irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex</pre></div>
+    <p id="primary-after">Then open a new terminal window and check it with <code>neplang --version</code>.</p>
+  </div>
+
+  <div class="platforms">
+    <section aria-labelledby="win-h">
+      <h2 id="win-h">Windows</h2>
+      <h3>Installer script</h3>
+      <p>In PowerShell. It installs to <code>%LOCALAPPDATA%\Programs\neplang</code> and adds it to your <code>PATH</code>.</p>
+      <div class="cmd"><pre>irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex</pre></div>
+      <h3>Scoop</h3>
+      <div class="cmd"><pre>scoop bucket add neplang https://github.com/charitraa/scoop-neplang
+scoop install neplang</pre></div>
+      <h3>winget</h3>
+      <div class="cmd"><pre>winget install charitraa.NepLang</pre></div>
+      <p>The winget package is waiting for review by the winget team. Until it is published, use the installer script or Scoop.</p>
+      <h3>By hand</h3>
+      <p>Download <a href="https://github.com/charitraa/NepLang/releases/latest/download/neplang-windows-x86_64.exe">neplang-windows-x86_64.exe</a>, rename it to <code>neplang.exe</code> and put it in a folder on your <code>PATH</code>.</p>
+    </section>
+
+    <section aria-labelledby="mac-h">
+      <h2 id="mac-h">macOS</h2>
+      <h3>Installer script</h3>
+      <p>Works on Apple silicon and Intel Macs. It installs to <code>~/.local/bin</code>.</p>
+      <div class="cmd"><pre>curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh</pre></div>
+      <h3>Homebrew</h3>
+      <div class="cmd"><pre>brew install charitraa/neplang/neplang</pre></div>
+      <h3>By hand</h3>
+      <p>Download <a href="https://github.com/charitraa/NepLang/releases/latest/download/neplang-macos-universal">neplang-macos-universal</a>, then <code>chmod +x</code> it and move it to a folder on your <code>PATH</code>.</p>
+    </section>
+
+    <section aria-labelledby="linux-h">
+      <h2 id="linux-h">Linux</h2>
+      <h3>Installer script</h3>
+      <p>For x86_64 and arm64. It installs to <code>~/.local/bin</code>.</p>
+      <div class="cmd"><pre>curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh</pre></div>
+      <h3>Ubuntu, Debian, Linux Mint</h3>
+      <p>Download the <code>.deb</code> for your machine from the list below, then:</p>
+      <div class="cmd"><pre>sudo apt install ./neplang_*_amd64.deb</pre></div>
+      <h3>Fedora, RHEL</h3>
+      <div class="cmd"><pre>sudo dnf install ./neplang-*.x86_64.rpm</pre></div>
+      <h3>Arch, Manjaro, CachyOS</h3>
+      <div class="cmd"><pre>git clone https://github.com/charitraa/NepLang.git
+cd NepLang/packaging/arch && makepkg -si</pre></div>
+      <h3>Homebrew on Linux</h3>
+      <div class="cmd"><pre>brew install charitraa/neplang/neplang</pre></div>
+    </section>
+  </div>
+
+  <section class="section" aria-labelledby="files-h" style="margin-top:3rem">
+    <h2 id="files-h">All files in this release</h2>
+    <p id="files-note">Loading the file list from GitHub…</p>
+    <div style="overflow-x:auto">
+      <table class="assets" id="assets" hidden>
+        <thead><tr><th scope="col">File</th><th scope="col">For</th><th scope="col">Size</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p>Check a download against <code>SHA256SUMS</code> with <code>sha256sum -c SHA256SUMS --ignore-missing</code>.</p>
+  </section>
+
+  <section class="section" aria-labelledby="build-h">
+    <h2 id="build-h">Optional: <code>neplang build</code></h2>
+    <p>Running programs needs nothing else. Only <code>neplang build</code>, which makes a standalone executable, also needs a C compiler: <code>gcc</code> on Linux, <code>xcode-select --install</code> on macOS, or <a href="https://www.msys2.org">MSYS2</a> with <code>mingw-w64-ucrt-x86_64-gcc</code> on Windows.</p>
+  </section>
+
+  <section class="section" aria-labelledby="src-h">
+    <h2 id="src-h">Build from source</h2>
+    <p>You need <code>git</code>, <code>make</code> and a C compiler.</p>
+    <div class="cmd"><pre>git clone https://github.com/charitraa/NepLang.git
+cd NepLang
+make
+sudo make install</pre></div>
+  </section>
+
+  <section class="section" aria-labelledby="up-h">
+    <h2 id="up-h">Update or uninstall</h2>
+    <p>To update, run the same install command again. To remove NepLang, delete <code>~/.local/bin/neplang</code> (Linux and macOS) or the <code>%LOCALAPPDATA%\Programs\neplang</code> folder (Windows), or use your package manager: <code>scoop uninstall neplang</code>, <code>brew uninstall neplang</code>, <code>sudo apt remove neplang</code>.</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>NepLang is free and open source under the MIT license.</span>
+    <span><a href="https://github.com/charitraa/NepLang">Source code</a> &nbsp; <a href="https://github.com/charitraa/NepLang/issues">Report a problem</a> &nbsp; <a href="https://github.com/charitraa/NepLang/releases">Releases</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const PRIMARY = {
+    windows: ['Windows', 'Open PowerShell and run:', 'irm https://raw.githubusercontent.com/charitraa/NepLang/main/install.ps1 | iex'],
+    macos: ['macOS', 'Open Terminal and run:', 'curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh'],
+    linux: ['Linux', 'Open a terminal and run:', 'curl -fsSL https://raw.githubusercontent.com/charitraa/NepLang/main/install.sh | sh'],
+  };
+  const p = PRIMARY[NepLang.detectOS()];
+  document.getElementById('primary-title').textContent = 'For your computer: ' + p[0];
+  document.getElementById('primary-text').textContent = p[1];
+  document.getElementById('primary-cmd').textContent = p[2];
+
+  const FOR = [
+    [/windows.*\.exe$/, 'Windows (x64)'],
+    [/macos/, 'macOS (Apple silicon and Intel)'],
+    [/linux-x86_64$/, 'Linux x86_64'],
+    [/linux-arm64$/, 'Linux arm64'],
+    [/_amd64\.deb$/, 'Ubuntu / Debian x86_64'],
+    [/_arm64\.deb$/, 'Ubuntu / Debian arm64'],
+    [/x86_64\.rpm$/, 'Fedora / RHEL x86_64'],
+    [/aarch64\.rpm$/, 'Fedora / RHEL arm64'],
+    [/SHA256SUMS/, 'Checksums'],
+  ];
+  const size = (b) => b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.round(b / 1e3) + ' KB';
+
+  fetch('https://api.github.com/repos/charitraa/NepLang/releases/latest')
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((rel) => {
+      const date = new Date(rel.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      const meta = document.getElementById('release-meta');
+      meta.textContent = 'Latest release: ';
+      const a = document.createElement('a');
+      a.href = rel.html_url;
+      a.textContent = 'NepLang ' + rel.tag_name.replace(/^v/, '');
+      meta.appendChild(a);
+      meta.appendChild(document.createTextNode(', published ' + date + '.'));
+
+      const body = document.querySelector('#assets tbody');
+      for (const asset of rel.assets) {
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td');
+        const link = document.createElement('a');
+        link.href = asset.browser_download_url;
+        link.textContent = asset.name;
+        td1.appendChild(link);
+        const td2 = document.createElement('td');
+        const hit = FOR.find(([re]) => re.test(asset.name));
+        td2.textContent = hit ? hit[1] : '';
+        const td3 = document.createElement('td');
+        td3.className = 'size';
+        td3.textContent = size(asset.size);
+        tr.append(td1, td2, td3);
+        body.appendChild(tr);
+      }
+      document.getElementById('assets').hidden = false;
+      document.getElementById('files-note').textContent = 'Every file is built and tested automatically on GitHub.';
+    })
+    .catch(() => {
+      const note = document.getElementById('files-note');
+      note.textContent = 'The file list could not be loaded. ';
+      const a = document.createElement('a');
+      a.href = 'https://github.com/charitraa/NepLang/releases/latest';
+      a.textContent = 'See all files on GitHub';
+      note.appendChild(a);
+    });
+})();
+</script>
+</body>
+</html>

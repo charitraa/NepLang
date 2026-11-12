@@ -16,6 +16,9 @@ kaam factorial(n) {
 vana(factorial(6))    # 720
 ```
 
+**Website and playground: <https://charitraa.github.io/NepLang/>**. Try NepLang in your
+browser without installing anything.
+
 You run a `.np` file the same way you run a Python file: `neplang file.np` instead of
 `python file.py`. NepLang comes with an interactive REPL, a checker that catches mistakes
 before your program runs, and it can turn programs into native executables. It runs on
