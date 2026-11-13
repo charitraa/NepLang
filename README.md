@@ -16,7 +16,7 @@ kaam factorial(n) {
 vana(factorial(6))    # 720
 ```
 
-**Website and playground: <https://charitraa.github.io/NepLang/>**. Try NepLang in your
+**Website and playground: <https://neplang.charitrashrestha.com.np>**. Try NepLang in your
 browser without installing anything.
 
 You run a `.np` file the same way you run a Python file: `neplang file.np` instead of
